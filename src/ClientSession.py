@@ -65,6 +65,7 @@ def proofWorkerTask(inputQueue, blkPbSz, blkDatSz, chlng, lost, T, lock, cVal, N
             
             with lock:
                 x.startTimer(pName, "ibf_serv")
+         
                 ibf.insert(block, chlng, N, g, True)
                 x.endTimer(pName, "ibf_serv")
                 cVal["cSum"] += (aI*bI)
@@ -160,6 +161,7 @@ class ClientSession(object):
         try:      
             ibf.zero(fsMsg.datSize)
         except OSError as e:
+            print str(e)
             p = psutil.Process(os.getpid())
             p.get_open_files()
             
@@ -217,7 +219,17 @@ class ClientSession(object):
     
 
         et.endTimer(pName, "cmbLost")
-        ibfCells = ibf.cells()
+        #ibfCells = ibf.cells()
+        ibfCells = []
+        start = 0
+        step = 500
+        while True:
+            res = ibf.rangedCells(start,step)
+            if len(res) == 0:
+                break
+            ibfCells+= res
+            start+=step
+        
         proofMsg = MU.constructProofMessage(combinedValues["cSum"],
                                             combinedValues["cTag"],
                                             ibfCells, 

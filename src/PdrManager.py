@@ -4,7 +4,7 @@ from multiprocessing.managers import BaseProxy
 
 class IbfProxy(BaseProxy):
     _exposed_=['insert', 'zero', 'getIndices', 'binPadLostIndex', 
-               'getCells', 'subtractIbf', 'generateIbfFromProtobuf']
+               'getCells', 'subtractIbf', 'generateIbfFromProtobuf', 'getRangedCells']
     
     def insert(self,block, secret, N, g, isHashProdOne):
         self._callmethod('insert', (block, secret, N, g, isHashProdOne))
@@ -20,6 +20,9 @@ class IbfProxy(BaseProxy):
 
     def cells(self):
         return self._callmethod('getCells', ())
+    
+    def rangedCells(self, start, end):
+        return self._callmethod('getRangedCells', (start,end))
     
     def subtractIbf(self, otherIbf, secret, N, dataByteSize, isHashProd):
         return self._callmethod('subtractIbf', (otherIbf, secret, N, dataByteSize, isHashProd))

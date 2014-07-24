@@ -39,6 +39,12 @@ class Ibf(object):
 	def getCells(self):
 		return self.cells
 
+	def getRangedCells(self, start, end):
+		c = []
+		for i in xrange(start,end):
+			c.append(self.cells[i])
+		return c
+
 	def zero(self,  dataBitSize):
 		for cellIndex in xrange(self.m):
 			self.cells[cellIndex] = Cell(0, dataBitSize)
@@ -46,7 +52,7 @@ class Ibf(object):
 	def insert(self, block, secret, N, g, isHashProdOne=False):
 		blockIndices = self.getIndices(block)
 		for i in blockIndices:
-				self.cells[i].add(block, secret, N, g, isHashProdOne)
+			self.cells[i].add(block, secret, N, g, isHashProdOne)
 			
 
 		
