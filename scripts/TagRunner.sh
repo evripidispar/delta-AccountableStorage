@@ -1,0 +1,21 @@
+#!/bin/bash
+python driver.py -b blocks/blk_100_blocks_1024_sizeBytes.dat -g generator.txt -k 6 -n 1024 -w 8 --task 1 -r runs/100____1024.txt -l 4 --tagmode True;
+python driver.py -b blocks/blk_100_blocks_2048_sizeBytes.dat -g generator.txt -k 6 -n 1024 -w 8 --task 1 -r runs/100____2048.txt -l 4 --tagmode True;
+python driver.py -b blocks/blk_100_blocks_4096_sizeBytes.dat -g generator.txt -k 6 -n 1024 -w 8 --task 1 -r runs/100____4096.txt -l 4 --tagmode True;
+python driver.py -b blocks/blk_100_blocks_8192_sizeBytes.dat -g generator.txt -k 6 -n 1024 -w 8 --task 1 -r runs/100____8192.txt -l 4 --tagmode True;
+python driver.py -b blocks/blk_1000_blocks_1024_sizeBytes.dat -g generator.txt -k 6 -n 1024 -w 8 --task 1 -r runs/1000____1024.txt -l 6 --tagmode True;
+python driver.py -b blocks/blk_1000_blocks_2048_sizeBytes.dat -g generator.txt -k 6 -n 1024 -w 8 --task 1 -r runs/1000____2048.txt -l 6 --tagmode True;
+python driver.py -b blocks/blk_1000_blocks_4096_sizeBytes.dat -g generator.txt -k 6 -n 1024 -w 8 --task 1 -r runs/1000____4096.txt -l 6 --tagmode True;
+python driver.py -b blocks/blk_1000_blocks_8192_sizeBytes.dat -g generator.txt -k 6 -n 1024 -w 8 --task 1 -r runs/1000____8192.txt -l 6 --tagmode True;
+python driver.py -b blocks/blk_10000_blocks_1024_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 1 -r runs/10000____1024.txt -l 9 --tagmode True;
+python driver.py -b blocks/blk_10000_blocks_2048_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 1 -r runs/10000____2048.txt -l 9 --tagmode True;
+python driver.py -b blocks/blk_10000_blocks_4096_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 1 -r runs/10000____4096.txt -l 9 --tagmode True;
+python driver.py -b blocks/blk_10000_blocks_8192_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 1 -r runs/10000____8192.txt -l 9 --tagmode True;
+python driver.py -b blocks/blk_100000_blocks_1024_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 9 -r runs/100000____1024.txt -l 11 --tagmode True;
+python driver.py -b blocks/blk_100000_blocks_2048_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 19 -r runs/100000____2048.txt -l 11 --tagmode True;
+python driver.py -b blocks/blk_100000_blocks_4096_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 39 -r runs/100000____4096.txt -l 11 --tagmode True;
+python driver.py -b blocks/blk_100000_blocks_8192_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 78 -r runs/100000____8192.txt -l 11 --tagmode True;
+python driver.py -b blocks/blk_500000_blocks_1024_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 49 -r runs/500000____1024.txt -l 13 --tagmode True;
+python driver.py -b blocks/blk_500000_blocks_2048_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 98 -r runs/500000____2048.txt -l 13 --tagmode True;
+python driver.py -b blocks/blk_500000_blocks_4096_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 195 -r runs/500000____4096.txt -l 13 --tagmode True;
+python driver.py -b blocks/blk_500000_blocks_8192_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 391 -r runs/500000____8192.txt -l 13 --tagmode True;

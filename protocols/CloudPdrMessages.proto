@@ -1,0 +1,130 @@
+
+
+message PublicKey {
+	required string n = 1;
+	required string g = 2;
+}
+
+message BlockDisk {
+	required bytes index=1;
+	required bytes dat=2;
+}
+
+
+message Filesystem {
+	required int32 pbSize=1;
+	required int32 numBlk=2;
+	required int32 index=3;
+	required int32 datSize=4;
+}
+	
+message BlockCollectionDisk {
+	required int32 blockBitSize=1;
+	repeated BlockDisk collection=2;
+}
+
+message SaveTagsForLater {
+	required string key = 1;
+	required int32 bNum = 2;
+	required int32 bSz = 3;
+	required double ctime=4;
+	repeated int32 index=5;
+	repeated string tags=6;
+}
+
+message Block {
+	required string index = 1;
+	required bytes data = 2;
+}
+
+
+message BlockCollection {
+	required int32 blockBitSize = 1;
+	repeated Block blocks=2;
+}
+
+
+message TagCollection {
+	repeated int32 index=1;
+	repeated string tags=2;
+}
+
+
+message Init {
+	required PublicKey pk = 1;
+	required string filesystem=2;
+	required TagCollection tc = 3;
+	required int32 delta=4;
+	required int32 k=5;
+	required int64 fsNumBlocks=6;
+	required string runId=7;
+}
+
+message InitAck {
+	required bool ack=1;
+}
+
+message Challenge {
+	required string challenge=1;
+	repeated int32 testIndices=2;
+}
+
+message Cell {
+	required int32 count=1;
+	required int32 hashprod=2;
+	required string data=3;
+	required int32 cellIndex=4;
+}
+
+message Ibf {
+	repeated Cell cells=1;
+}
+
+
+message LTagPair {
+	required int32  k=1;
+	required string v=2;
+}
+
+message LostTagPairs {
+	repeated LTagPair pairs=1;
+}
+
+message Proof {
+	required string combinedSum=1;
+	required string combinedTag=2;
+	required Ibf serverState=3;
+	repeated int32 lostIndeces=4;
+	optional LostTagPairs lostTags=5;
+}
+
+message Lost {
+	repeated int32 L=1;
+	optional int32 lossNum=2;
+}
+
+
+message LostAck {
+	required bool ack = 1;
+}
+
+message CloudPdrMsg {
+
+	enum msgType {
+		INIT=0;
+		INIT_ACK=1;
+		CHALLENGE=2;
+		PROOF=3;
+		LOSS=4;
+		LOSS_ACK=5;
+	}
+	
+	required msgType type = 1;
+	optional Init init = 2;
+	optional InitAck ack = 3;
+	optional Challenge chlng=4;
+	optional Proof proof=5;
+	optional Lost lost=6;	
+	optional LostAck lack=7;
+	optional string cltId=8;
+}
