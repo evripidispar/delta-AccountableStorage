@@ -172,7 +172,17 @@ def BlockDisk2Block(serialized, blkSz):
 def chunks(s, n):
     for start in xrange(0, len(s), n):
         yield s[start:start+n]
-
+        
+def chunkAlmostEqual(seq, num):
+    avg = len(seq) / float(num)
+    out = []
+    last = 0.0
+    
+    while last < len(seq):
+        out.append(seq[int(last):int(last + avg)])
+        last += avg
+    
+    return out
 
 def main():
     p = argparse.ArgumentParser(description='Driver')

@@ -37,9 +37,8 @@ def proofWorkerTask(inputQueue, blkPbSz, blkDatSz, chlng, lost, T, lock, cVal, N
             TT[pName+str("_cSumKept")] = x.getTotalTimer(pName, "cSumKept") - x.getTotalTimer(pName, "ibf_serv")
             TT[pName+str("_cTagKept")] = x.getTotalTimer(pName, "cTagKept") - x.getTotalTimer(pName, "ibf_serv")
             TT[pName+str("_ibf_serv")] = x.getTotalTimer(pName, "ibf_serv")
-            
-            
             return
+        
         for blockPbItem in BE.chunks(item,blkPbSz):
             block = BE.BlockDisk2Block(blockPbItem, blkDatSz)
             bIndex = block.getDecimalIndex()
@@ -59,8 +58,6 @@ def proofWorkerTask(inputQueue, blkPbSz, blkDatSz, chlng, lost, T, lock, cVal, N
             aI = pickPseudoRandomTheta(chlng, block.getStringIndex())
             aI = number.bytes_to_long(aI)
             bI = number.bytes_to_long(block.data.tobytes())
-            
-          
             
             
             with lock:

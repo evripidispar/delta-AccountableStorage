@@ -14,4 +14,11 @@ class RpcPdrClient(object):
         sock.close()
         return inMsg
         
+    def rpcAddress(self, address, msg):
+        sock = self.context.socket(zmq.REQ)
+        sock.connect(address)
+        sock.send_pyobj(msg)
+        inMsg = sock.recv()
+        sock.close()
+        return inMsg
 

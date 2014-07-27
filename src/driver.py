@@ -3,7 +3,7 @@ import sys
 from BlockUtil import *
 from Ibf import *
 import zmq
-#from CloudPDRObj import *
+
 import CloudPdrFuncs
 import os
 import BlockEngine as BE
@@ -28,9 +28,13 @@ import struct
 from PdrManager import IbfManager, QSetManager
 import gmpy2
 import copy
-import time
+
 import cPickle
 import psutil
+from HashFunc import Hash1, Hash2, Hash3, Hash4, Hash5, Hash6
+from Queue import Queue
+from Queue import Empty
+from preprocStage import preprocWorker
 
 LOST_BLOCKS = 6
 
@@ -58,6 +62,7 @@ def subsetAndLessThanDelta(clientMaxBlockId, serverLost, delta):
         print lossLen , delta
         return (False, "FAIL#2: Server has lost more than DELTA blocks")
     return (True, "")
+
 
 
 
@@ -270,22 +275,43 @@ def processServerProof(cpdrProofMsg, session):
     et.endTimer(pName, "lostSum")
     
     
-    serverStateIbf = session.ibf.generateIbfFromProtobuf(cpdrProofMsg.proof.serverState,
-                                             session.fsInfo["blkSz"])
+    #serverStateIbf = session.ibf.generateIbfFromProtobuf(cpdrProofMsg.proof.serverState,
+    #                                         session.fsInfo["blkSz"])
     
+    print session.ibf.m()
+    ibf = Ibf(session.ibf.k(), session.ibf.m())
+    
+    serverStateIbf = ibf.generateIbfFromProtobuf(cpdrProofMsg.proof.serverState,
+                                                 session.fsInfo["blkSz"])
         
     
     
-        
     localIbf = Ibf(session.fsInfo["k"], session.fsInfo["ibfLength"])
+    localIbf.zero(session.fsInfo["blkSz"])
     
-    lc = session.ibf.cells()
-    localIbf.setCells(lc)
+    start = 0
+    step = 100
+    lc = []
+    while True:
+        res = session.ibf.rangedCells(start,step)
+        if len(res) == 0:
+            break
+        lc+= res
+        start+=step
+        
+    for entry in lc:
+        k,c = entry
+        localIbf.setSingleCell(k, c)
+    
+    #lc = session.ibf.cells()
+    print "-----"
+    #localIbf.setCells(lc)
     et.registerTimer(pName, "subIbf")
     et.startTimer(pName,"subIbf")
     diffIbf = localIbf.subtractIbf(serverStateIbf, session.challenge,
                                     session.sesKey.key.n, session.fsInfo["blkSz"], True)
-
+    #diffIbf = session.ibf.subtractIbf(serverStateIbf, session.challenge,
+    #                               session.sesKey.key.n, session.fsInfo["blkSz"], True)
 
     et.endTimer(pName,"subIbf")
     
@@ -518,10 +544,89 @@ def main():
     try:      
         ibf.zero(fs.datSize)
     except OSError:
-        
         p = psutil.Process(os.getpid())
         p.get_open_files()
     
+    zmqContext =  zmq.Context()
+    publisherAddress = "tcp://127.0.0.1:9998"
+    sinkAddress = "tcp://127.0.0.1:9999"
+    
+    publishSocket = zmqContext.socket(zmq.PUB)
+    publishSocket.bind(publisherAddress)
+    
+    sinkSocket = zmqContext.socket(zmq.REP)
+    sinkSocket.bind(sinkAddress)
+    
+
+    workersPool = []
+    
+    cellAssignments = BE.chunkAlmostEqual(range(ibfLength), args.workers)
+    blocksAssignments = BE.chunkAlmostEqual(range(fs.numBlk), args.workers)
+
+    
+    
+    for w,cellsPerW,blocksPerW in zip(xrange(args.workers), cellAssignments, blocksAssignments):
+        print "worker",  w, "cells", len(cellsPerW), "Blocks", len(blocksPerW)
+        p = mp.Process(target=preprocWorker,
+                       args=(publisherAddress, sinkAddress, cellsPerW, 
+                             args.hashNum, ibfLength, fs.datSize,
+                             secret, public, True, 
+                             blocksPerW, True, w))
+        p.start()
+        workersPool.append(p)
+    
+        
+    print "Waiting to establish workers"
+    time.sleep(5)
+    
+    blockStep = 0
+    while True:
+        dataChunk = fp.read(bytesPerWorker)
+        if dataChunk:
+            for blockPBItem in BE.chunks(dataChunk, fs.pbSize):
+                block = BE.BlockDisk2Block(blockPBItem, fs.datSize)
+                bIndex = block.getDecimalIndex()
+                job = {'index':bIndex, 'block':block}
+                job = cPickle.dumps(job)
+                publishSocket.send_multipart(['work', job])
+                blockStep+=1
+                if (blockStep  % 100000) == 0:
+                    print "Dispatched ", blockStep, "out of", fs.numBlk
+                #    time.sleep(10)
+                
+                
+                
+        else:
+            publishSocket.send_multipart(["end"])
+            break
+        
+    
+    work = []
+    print 'Waiting'
+    while len(work) != args.workers:
+            w = sinkSocket.recv_pyobj()
+            sinkSocket.send("ACK")
+            work.append(w)
+            if len(work) == len(workersPool):
+                print 'Break'
+                   
+        
+    
+    for i in work:
+        
+        print i["worker"], i["blocksExamined"]
+        #i = cPickle.loads(i[1])
+        #x = i["timers"].getTotalTimer(i["worker"], "ibf")
+        #if maxIbf < x:
+        #    maxIbf = x
+        
+    for worker in workersPool:
+        worker.join()
+        worker.terminate()
+        
+    
+    sys.exit(0)
+    ##################
     pool = []
     for i in xrange(args.workers):
         p = mp.Process(target=workerTask, args=(blockByteChunks,W,T,ibf,fs.pbSize,fs.datSize,secret,public, TT, doNotComputeTags, InsertLock))
@@ -556,6 +661,7 @@ def main():
     pdrSes.addState(ibf)
     pdrSes.W = W
     
+    
         
     pdrSes.addDelta(delta)
 
@@ -568,7 +674,7 @@ def main():
     ip = "127.0.0.1"
    # ip = '192.168.1.8'
    
-    zmqContext =  zmq.Context()
+    
     clt = RpcPdrClient(zmqContext)    
     print "Sending Initialization message"
     initAck = clt.rpc(ip, 9090, initMsg) 

@@ -2,13 +2,11 @@ from Crypto.Util import number
 from bitarray import bitarray
 from Block import *
 from CryptoUtil import apply_f
-from SharedCounter import SharedCounter
 import gmpy2
 
 class Cell(object):
 	def __init__(self, id, dataBitSize):
-# 		self.count = 0
-		self.count = SharedCounter()
+ 		self.count = 0		
 		self.dataSum = Block(id, dataBitSize)
 		self.hashProd = 1
 		self.f = 0
@@ -27,8 +25,8 @@ class Cell(object):
 		self.hashProd =  1
 
 	def setCount(self, count):
-# 		self.count = count
-		self.count.setValue(count)
+ 		self.count = count
+#		self.count.setValue(count)
 
 	def setHashProd(self, hashProd):
 		self.hashProd = hashProd
@@ -37,8 +35,8 @@ class Cell(object):
 		self.dataSum = dataSum
 
 	def getCount(self):
-# 		return self.count
-		return self.count.getValue()
+ 		return self.count
+#		return self.count.getValue()
 
 	def getHashProd(self):
 		return self.hashProd
@@ -49,8 +47,8 @@ class Cell(object):
 
 	def add(self, block, secret, N, g, keepHashProdOne=False):
 		
-# 		self.count += 1
-		self.count.increment()
+ 		self.count += 1
+#		self.count.increment()
 		
 		self.dataSum.addBlockData(block)
 		
@@ -67,11 +65,11 @@ class Cell(object):
 	def remove(self, block, secret, N, g):
 		#TODO
 		#count handling
-# 		if (self.count < 0):
-# 			self.count += 1
-# 		else:
-# 			self.count -= 1
-		self.count.decrementIfNotZero()
+ 		if (self.count < 0):
+ 			self.count += 1
+ 		else:
+ 			self.count -= 1
+#		self.count.decrementIfNotZero()
 		
 		
 		if block.isZeroDataSum()==False: #TODO
@@ -82,24 +80,24 @@ class Cell(object):
 			self.hashProd = gmpy2.powmod(self.hashProd, 1, N)
 
 	def isPure(self):
-# 		if self.count == 1:  
-# 			return True
-# 		return False
-		return self.count.isPure()
+ 		if self.count == 1:  
+ 			return True
+ 		return False
+#		return self.count.isPure()
 
 	def isEmpty(self):
-# 		if self.count == 0:
-# 			return True
-# 		return False
-		return self.count.isEmpty()
+ 		if self.count == 0:
+ 			return True
+ 		return False
+#		return self.count.isEmpty()
 
 	def subtract(self, otherCell, dataBitSize, N, isHashProdOne=False):
 		
 		diffCell = Cell(0, dataBitSize)
 		
 		#counter
-# 		diffCell.count = self.count - otherCell.getCount()
-		diffCell.count.setValue(self.count.getValue()-otherCell.count.getValue())
+ 		diffCell.count = self.count - otherCell.getCount()
+#		diffCell.count.setValue(self.count.getValue()-otherCell.count.getValue())
 		
 		#datasum
 		diffCell.dataSum.addBlockData(self.getDataSum())

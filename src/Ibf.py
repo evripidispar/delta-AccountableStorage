@@ -15,49 +15,65 @@ class Ibf(object):
 	def setCells(self, cells):
 		self.cells = cells
 
+	#def setCellsFromList(self, cellList):
+	#	counter = 0
+	
+	
 	def binPadLostIndex(self, lostIndex):
 		binLostIndex = "{0:b}".format(lostIndex)
 		pad = self.BLOCK_INDEX_LEN-len(binLostIndex)
 		binLostIndex = pad*'0'+binLostIndex
 		return binLostIndex 
 
-	def getIndices(self, block, isIndex=False):
+	@staticmethod
+	def getIndices(k, m, hashFunc, block,isIndex=False, cellsAssignment=None):
 		indices = []
 		if isIndex == False:
 			blockIndex = block.getStringIndex()
 		else:
 			blockIndex = block #Cases coming from the proof part of the algorithm
 			
+		for i in range(k):
+			hashIndexVal = hashFunc[i](blockIndex)
+			indices.append(hashIndexVal % m)
 			
-		for i in range(self.k):
-			hashIndexVal = self.HashFunc[i](blockIndex)
-			indices.append(hashIndexVal % self.m)
-			
-		
+		if cellsAssignment != None:
+			return [i for i in indices if i in cellsAssignment]
 		return indices
 
 	def getCells(self):
 		return self.cells
 
+	def setSingleCell(self, index , cell):
+		self.cells[index] = cell
+
+
 	def getRangedCells(self, start, end):
 		c = []
 		for i in xrange(start,end):
-			c.append(self.cells[i])
+			if i in self.cells.keys():
+				c.append((i,self.cells[i]))
 		return c
+	
+	def getK(self):
+		return self.k
+	
+	def getM(self):
+		return self.m
 
 	def zero(self,  dataBitSize):
 		for cellIndex in xrange(self.m):
 			self.cells[cellIndex] = Cell(0, dataBitSize)
 
 	def insert(self, block, secret, N, g, isHashProdOne=False):
-		blockIndices = self.getIndices(block)
+		blockIndices = self.getIndices(self.k, self.m,  self.HashFunc, block)
 		for i in blockIndices:
 			self.cells[i].add(block, secret, N, g, isHashProdOne)
 			
 
 		
 	def delete(self, block, secret, N, g, selfIndex=-1):
-		blockIndices =  self.getIndices(block)
+		blockIndices =  self.getIndices(self.k, self.m, self.HashFunc, block)
 		for i in blockIndices:
 			if i == selfIndex:
 				continue
@@ -91,14 +107,20 @@ class Ibf(object):
 
 
 	def findBlock(self,block):
-		indices = self.getIndices(block)
+		indices = self.getIndices(self.k, self.m, self.HashFunc, block)
 		for i in indices:
 			if self.cells[i].isEmpty():
 				return False
 		return True
 
-	def generateIbfFromProtobuf(self, ibfPbuf, dataBitSize):
-		newIbf = Ibf(self.k, self.m)
+	def generateIbfFromProtobuf(self, ibfPbuf, dataBitSize, k=0, m=0):
+		
+		if k == 0:
+			k = self.k
+		if m == 0:
+			m = self.m
+			
+		newIbf = Ibf(k, m)
 		newIbf.zero(dataBitSize)
 		for c in ibfPbuf.cells:
 			realCell = Cell(0,0)
