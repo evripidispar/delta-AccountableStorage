@@ -91,10 +91,10 @@ def constructLostAckMessage():
 def constructIbfMessage(ibfCells):
     ibfMsg = CloudPdrMessages_pb2.Ibf()
     
-    for entry in ibfCells:
-        index , cell = entry
+    for index,cell in ibfCells.items():
+        
         c = ibfMsg.cells.add()
-        c.count = cell.count.getValue()
+        c.count = cell.count
         c.hashprod = cell.hashProd
         c.data = cell.dataSum.data.to01()
         c.cellIndex = index

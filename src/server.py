@@ -85,7 +85,7 @@ def main():
                    help='CloudPdr server port')
 
     
-    p.add_argument('-w', dest='workersNum', action='store', default=2,
+    p.add_argument('-w', dest='workersNum', action='store', default=2, type=int,
                    help='Number of workers')
 
     

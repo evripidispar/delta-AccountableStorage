@@ -2,6 +2,7 @@
 import zmq
 import gmpy2
 import cPickle
+import time
 import threading
 import multiprocessing as mp
 
@@ -30,6 +31,7 @@ def serverProofTask(taskQ, endQ, results, workerName, cells, blockAssignments,
     while True:
         try:
             job = taskQ.get()
+            taskQ.task_done()
             if job == "end":
                 results["timers"] = x
                 endQ.put(results)
@@ -40,7 +42,7 @@ def serverProofTask(taskQ, endQ, results, workerName, cells, blockAssignments,
             
             if bIndex not in lostBlocks:
                 x.startTimer(workerName, "ibf_serv")
-                indices = Ibf.getIndices(k, m, hashFunc, job["block"], cellAssignments=cells)
+                indices = Ibf.getIndices(k, m, hashFunc, job["block"], cellsAssignment=cells)
                 for i in indices:
                     if i not in results["cells"].keys():
                         results["cells"][i] = Cell(0, blkSize)
@@ -74,7 +76,8 @@ def serverProofTask(taskQ, endQ, results, workerName, cells, blockAssignments,
                 
         except Empty:
             pass
-            
+        except (RuntimeError, TypeError, NameError) as e:
+            print "Error", str(e)   
 
 
 def serverProofWorker(publisherAddress, sinkAddress, cells,
@@ -89,6 +92,8 @@ def serverProofWorker(publisherAddress, sinkAddress, cells,
     subSocket.setsockopt(zmq.SUBSCRIBE, b"work")
     subSocket.setsockopt(zmq.SUBSCRIBE, b"end")
     subSocket.connect(publisherAddress)
+    sinkSocket = context.socket(zmq.REQ)
+    sinkSocket.connect(sinkAddress)
     
     workerName = mp.current_process().name
     hashFunc = [Hash1, Hash2, Hash3, Hash4, Hash5, Hash6]
@@ -107,13 +112,14 @@ def serverProofWorker(publisherAddress, sinkAddress, cells,
         try:
             workItem = subSocket.recv_multipart()
             if workItem[0] == "end":
+                time.sleep(1)
                 taskQ.put_nowait("end")
                 res = endQ.get(True)
                 endQ.task_done()
-                
-                rpc = RpcPdrClient(context)
-                inMsg = rpc.rpcAddress(sinkAddress, res)
+                rpcClt = RpcPdrClient(context)
+                inMsg = rpcClt.rpcAddress(sinkAddress, res)
                 if inMsg == "ACK":
+                    print "got ack, time to die"
                     break
             else:
                 taskQ.put_nowait(workItem[1])

@@ -30,8 +30,7 @@ def preprocTask(taskQ, endQ, results, workerName, k, m, hashFunc, blockSz,
             job = taskQ.get()
             if job == "end":
                 results["timers"] = x
-                results["blocksExamined"] = b
-                #results = cPickle.dumps(results) 
+                results["blocksExamined"] = b 
                 endQ.put(results)
                 break
             b+=1

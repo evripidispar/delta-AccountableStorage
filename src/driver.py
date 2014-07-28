@@ -514,7 +514,7 @@ def main():
     blocksAssignments = BE.chunkAlmostEqual(range(fs.numBlk), args.workers)
 
     for w,cellsPerW,blocksPerW in zip(xrange(args.workers), cellAssignments, blocksAssignments):
-        print "worker",  w, "cells", len(cellsPerW), "Blocks", len(blocksPerW)
+        #print "worker",  w, "cells", len(cellsPerW), "Blocks", len(blocksPerW)
         p = mp.Process(target=preprocStage.preprocWorker,
                        args=(publisherAddress, sinkAddress, cellsPerW, 
                              args.hashNum, ibfLength, fs.datSize,
@@ -567,7 +567,7 @@ def main():
             pdrSes.T.update(i["tags"])
         pdrSes.TT[i["worker"]+str("_tag")] = i["timers"].getTotalTimer(i["worker"], "tag")
         pdrSes.TT[i["worker"]+str("_ibf")] = i["timers"].getTotalTimer(i["worker"], "ibf")
-        print i["worker"], i["blocksExamined"], i["w"].keys(), len(i["w"].keys()), len(pdrSes.W.keys()), len(localIbf.cells.keys()), ibfLength
+        #print i["worker"], i["blocksExamined"], i["w"].keys(), len(i["w"].keys()), len(pdrSes.W.keys()), len(localIbf.cells.keys()), ibfLength
         #x = i["timers"].getTotalTimer(i["worker"], "ibf")
         
     pdrSes.addState(localIbf) 

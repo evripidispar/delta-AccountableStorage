@@ -155,10 +155,13 @@ class ClientSession(object):
         combinedValues["cTag"] = 1L
         TT = {}
         
-        publisherAddress = "tcp://127.0.0.1:8888"
-        sinkAddress = "tcp://127.0.0.1:8889"
+        publisherAddress = "tcp://127.0.0.1:7878"
+        sinkAddress = "tcp://127.0.0.1:7979"
+        
+
         publishSocket = self.context.socket(zmq.PUB)
         publishSocket.bind(publisherAddress)
+        
         sinkSocket = self.context.socket(zmq.REP)
         sinkSocket.bind(sinkAddress)
         
@@ -166,6 +169,7 @@ class ClientSession(object):
         blockAssignments = BE.chunkAlmostEqual(range(fsMsg.numBlk), self.numWorkers)
         workersPool = []
         
+        print self.numWorkers
         for w,cellsPerW,blocksPerW in zip(xrange(self.numWorkers),
                                           cellAssignments, blockAssignments):
             p = mp.Process(target=serverProofStage.serverProofWorker,
@@ -188,24 +192,23 @@ class ClientSession(object):
                     bIndex = block.getDecimalIndex()
                     job = {'index':bIndex, 'block':block}
                     job = cPickle.dumps(job)
-                    publishSocket.send_multipart(['job', job])
+                    publishSocket.send_multipart(['work', job])
                     blockStep+=1
                     if blockStep % 100000 == 0:
                         print "Dispatched ", blockStep, "out of", fsMsg.numBlk
             else:
                 publishSocket.send_multipart(['end'])
+                break
         
         fp.close()
         work = []
-        print "Waiting to gather results"
+        print "Waiting to gather results from ", self.numWorkers
         while len(work) != self.numWorkers:
             w = sinkSocket.recv_pyobj()
+            sinkSocket.send("ACK")
             work.append(w)
             
-        for w in workersPool:
-            w.join()
-            w.terminate()
-        
+         
         serverIbf = Ibf(self.k, ibfLength)
         qS = {}
         for i in work:
@@ -220,20 +223,24 @@ class ClientSession(object):
             TT[i["worker"]+str("_cSumKept")] = i["timers"].getTotalTimer(i["worker"], "cSumKept") 
             TT[i["worker"]+str("_cTagKept")] = i["timers"].getTotalTimer(i["worker"], "cTagKept") 
             
-        print "combinedTag", combinedValues["cTag"]
-        print "combinedSum", combinedValues["cSum"]
+        #print "combinedTag", combinedValues["cTag"]
+        #print "combinedSum", combinedValues["cSum"]
      
+        for w in workersPool:
+            w.join()
+            w.terminate()
+      
         et.startTimer(pName, "cmbLost")
         combinedLostTags = {}
         for k in qS.keys():
-            print "Position:",  k
+            #print "Position:",  k
             val = qS[k]
             
             if k not in combinedLostTags.keys():
                 combinedLostTags[k] = 1
                  
             for v in val:
-                print "Indices in Qset", v
+                #print "Indices in Qset", v
                 binV  = serverIbf.binPadLostIndex(v)
                 aBlk = pickPseudoRandomTheta(self.challenge, binV)
                 aI = number.bytes_to_long(aBlk)
@@ -241,21 +248,12 @@ class ClientSession(object):
                 combinedLostTags[k] = gmpy2.powmod((combinedLostTags[k]*lostTag), 1, self.clientKeyN)
     
 
+        
         et.endTimer(pName, "cmbLost")
-        #ibfCells = ibf.cells()
-        ibfCells = []
-        start = 0
-        step = 500
-        while True:
-            res =serverIbf.rangedCells(start,step)
-            if len(res) == 0:
-                break
-            ibfCells+= res
-            start+=step
         
         proofMsg = MU.constructProofMessage(combinedValues["cSum"],
                                             combinedValues["cTag"],
-                                            ibfCells, 
+                                            serverIbf.cells, 
                                             self.lost ,
                                             combinedLostTags)
  
