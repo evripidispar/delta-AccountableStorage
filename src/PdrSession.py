@@ -18,6 +18,7 @@ class PdrSession(object):
         self.T = T
         self.TT = {}
         
+        
     def addSecret(self, secret):
         self.secret = secret
     
@@ -38,6 +39,13 @@ class PdrSession(object):
         
     def addibfLength(self, ibfLength):
         self.ibfLength =  ibfLength
+    
+    def addNetInfo(self, publisherAddress, sinkAddress, pubSocket, sinkSocket):
+        self.pubAddr = publisherAddress
+        self.sinkAddr = sinkAddress
+        self.pubSocket = pubSocket
+        self.sinkSocket = sinkSocket
+    
     
     def addFsInfo(self, blockNum, pbSize, blkSz, skip, bPerWorker,
                   workers, filesystem, ibfLength, hashNum):

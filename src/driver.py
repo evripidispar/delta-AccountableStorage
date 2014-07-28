@@ -31,7 +31,9 @@ import gmpy2
 import copy
 
 import cPickle
+import marshal
 import psutil
+import validateServerProofStage
 from HashFunc import Hash1, Hash2, Hash3, Hash4, Hash5, Hash6
 from Queue import Queue
 from Queue import Empty
@@ -42,34 +44,7 @@ LOST_BLOCKS = 6
 W = {}
 Tags = {}
 
-def produceClientId():
-    h = SHA256.new()
-    h.update(str(datetime.now()))
-    return h.hexdigest()
-
-
-
-
-def subsetAndLessThanDelta(clientMaxBlockId, serverLost, delta):
-    
-    lossLen = len(serverLost)
-    if lossLen >= clientMaxBlockId:
-        return (False, "Fail#1: LostSet from the server is not subset of the client blocks ")
-    
-    for i in serverLost:
-        if i>= 0 and i <= clientMaxBlockId:
-            continue
-    if lossLen > delta:
-        print lossLen , delta
-        return (False, "FAIL#2: Server has lost more than DELTA blocks")
-    return (True, "")
-
-
-
-
-
 def clientWorkerProof(inputQueue, blockProtoBufSz, blockDataSz, lost, chlng, W, N, comb, lock, qSets, ibf, manager, TT):
-    
     
     pName = mp.current_process().name
     x = ExpTimer()
@@ -148,72 +123,89 @@ def processServerProof(cpdrProofMsg, session):
     
 #     inputQueue, blockProtoBufSz, blockDataSz, lost, chlng, W, N, combW, lock
     
+    
     gManager = mp.Manager()
-    combRes = gManager.dict()
-    TT = gManager.dict()
-    combRes["w"] = 1
-    
-    
-    qSetManager = QSetManager()
-    qSetManager.start()
-    qSets = qSetManager.QSet()
-    
-    combLock = mp.Lock()
-    print session.fsInfo["workers"]
-    bytesPerWorker = mp.Queue(session.fsInfo["workers"])
+    cmbW = gManager.dict()
+    cmbW["w"] = 1
+    cmbWLock = mp.Lock()
     
     workerPool = []
-    for i in xrange(session.fsInfo["workers"]):
-        p = mp.Process(target=clientWorkerProof,
-                       args=(bytesPerWorker, session.fsInfo["pbSize"],
-                             session.fsInfo["blkSz"], servLost, 
-                             session.challenge, session.W, session.sesKey.key.n,
-                             combRes, combLock, qSets, session.ibf, gManager, TT))
+    cellsAssignments = BE.chunkAlmostEqual(range(session.fsInfo["ibfLength"]), session.fsInfo["workers"])
+    blockAssignments = BE.chunkAlmostEqual(range(session.fsInfo["blockNum"]), session.fsInfo["workers"])
+    
+    for w,cellsPerW,blocksPerW in zip(xrange(session.fsInfo["workers"]),
+                                      cellsAssignments, blockAssignments):
+        p = mp.Process(target=validateServerProofStage.worker,
+                       args=(session.pubAddr, session.sinkAddr,
+                             session.fsInfo["k"], session.fsInfo["ibfLength"],
+                             cellsPerW, blocksPerW, servLost, cmbWLock, cmbW,
+                             session.challenge, session.W, session.sesKey.key.n ))
+    
         p.start()
-        
         workerPool.append(p)
     
+    print "Waiting to establish workers"
     fp = open(session.fsInfo["fsName"], "rb")
     fp.read(4)
     fp.read(session.fsInfo["skip"])
     
+    blockStep=0
     while True:
-        chunk = fp.read(session.fsInfo["bytesPerWorker"])
-        if chunk:
-            bytesPerWorker.put(chunk)
+        dataChunk = fp.read(session.fsInfo["bytesPerWorker"])
+        if dataChunk:
+            for blockPBItem in BE.chunks(dataChunk, session.fsInfo["pbSize"]):
+                    block = BE.BlockDisk2Block(blockPBItem, session.fsInfo["blkSz"])
+                    bIndex = block.getDecimalIndex()
+                    job = {'index':bIndex, 'block': block}
+                    job = cPickle.dumps(job)
+                    session.pubSocket.send_multipart(["job", job])
+                    blockStep +=1
+                    if blockStep % 100000 == 0:
+                        print "Dispatched ", blockStep, "out of", session.fsInfo["blockNum"]
         else:
-            for j in xrange(session.fsInfo["workers"]):
-                bytesPerWorker.put("END")
+            session.pubSocket.send_multipart(["end"])
             break
     
-    for p in workerPool:
-        p.join()
-        
-    for p in workerPool:
-        p.terminate()
-    
-    
     fp.close()
-   
-   
-   
+    work = []
+    print "Waiting to gather results"
+    while len(work) != session.fsInfo["workers"]:
+        w = session.sinkSocket.recv_pyobj()
+        session.sinkSocket.send("ACK")
+        work.append(w)
+    
+    
+    for w in workerPool:
+        w.join()
+        w.terminate()
+    
+    
+    qS = {}
+    for i in work:
+        for k,v in i["qSets"].items():
+            if k not in qS.items():
+                qS[k] = []
+            qS[k] +=v
+        session.TT[i["worker"]+str("_cmbW")] = i["timers"].getTotalTimer(i["worker"], "cmbW")
+        session.TT[i["worker"]+str("_qSet_check")] = i["timers"].getTotalTimer(i["worker"], "qSet_check")
+         
+            
+    
     et.registerTimer(pName, "cmbW-last")
     et.startTimer(pName, "cmbW-last")
-    combinedWInv = number.inverse(combRes["w"], session.sesKey.key.n)  #TODO: Not sure this is true
+    combinedWInv = number.inverse(cmbW["w"], session.sesKey.key.n)  #TODO: Not sure this is true
     RatioCheck1=Te*combinedWInv
     RatioCheck1 = gmpy2.powmod(RatioCheck1, 1, session.sesKey.key.n)
     
    
     if RatioCheck1 != gS:
         print "FAIL#3: The Proof did not pass the first check to go to recover"
+        sys.exit(0)
         return False
 
     et.endTimer(pName, "cmbW-last")
 
     print "# # # # # # # ##  # # # # # # # # # # # # # ##"
-    
-   
-    qS = qSets.qSets()
     
     et.registerTimer(pName, "lostSum")
     et.startTimer(pName, "lostSum")
@@ -292,13 +284,36 @@ def processServerProof(cpdrProofMsg, session):
     if L== None:
         et.changeTimerLabel(pName, "recover", "recover-fail")
         print "Failed to recover"
-        return ("Exiting Failed Recovery...", TT, et) 
+        return ("Exiting Failed Recovery...", session.TT, et) 
         
     for blk in L:
         print blk.getDecimalIndex()
       
     print "check"
-    return ("Exiting Recovery...", TT, et)
+    return ("Exiting Recovery...", session.TT, et)
+
+
+
+def produceClientId():
+    h = SHA256.new()
+    h.update(str(datetime.now()))
+    return h.hexdigest()
+
+
+def subsetAndLessThanDelta(clientMaxBlockId, serverLost, delta):
+    
+    lossLen = len(serverLost)
+    if lossLen >= clientMaxBlockId:
+        return (False, "Fail#1: LostSet from the server is not subset of the client blocks ")
+    
+    for i in serverLost:
+        if i>= 0 and i <= clientMaxBlockId:
+            continue
+    if lossLen > delta:
+        print lossLen , delta
+        return (False, "FAIL#2: Server has lost more than DELTA blocks")
+    return (True, "")
+
 
 def processClientMessages(incoming, session, lostNum=None):
     
@@ -554,6 +569,7 @@ def main():
            
     
     pdrSes.W = {}
+    pdrSes.addNetInfo(publisherAddress, sinkAddress, publishSocket, sinkSocket)
     
     
     localIbf = Ibf(args.hashNum, ibfLength)    
@@ -580,21 +596,16 @@ def main():
         worker.terminate()
         
     
- 
- 
     pdrSes.addDelta(delta)
-
     sizeTag = getsizeofDictionary(pdrSes.T)
-
     initMsg = MU.constructInitMessage(pubPB, args.blkFp, pdrSes.T,
                                       cltId, args.hashNum, delta,
                                        fs.numBlk, args.runId)
 
     #ip = "10.109.173.162"
+    #ip = '192.168.1.8'
     ip = "127.0.0.1"
-   # ip = '192.168.1.8'
    
-    
     clt = RpcPdrClient(zmqContext)    
     print "Sending Initialization message"
     initAck = clt.rpc(ip, 9090, initMsg) 
@@ -611,19 +622,19 @@ def main():
     print "Sending Challenge message"
     proofMsg = clt.rpc(ip, 9090, challengeMsg)
     print "Received Proof message"
-    sys.exit(0)
+    
     result, proofParallelTimers, proofSequentialTimer  = processClientMessages(proofMsg, pdrSes)
     
     zmqContext.term()
     
     run_results = {}
     
-    for k in TT.keys():
+    for k in pdrSes.TT.keys():
         key = k[k.index("_")+1:]
         if key not in run_results.keys():
             run_results[key] = 0
-        if TT[k] >  run_results[key]:
-            run_results[key] = TT[k]
+        if pdrSes.TT[k] >  run_results[key]:
+            run_results[key] = pdrSes.TT[k]
         
     for k in proofParallelTimers.keys():
         key = k[k.index("_")+1:]
