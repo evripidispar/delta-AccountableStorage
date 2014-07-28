@@ -38,15 +38,15 @@ def validationTask(taskQ, endQ, results, workerName, k, m, hashFunc,
             bIndex = job["index"]
             if bIndex not in lostBlocks:
                 if bIndex in blockAssignments:
-                    x.startTimer(workerName, "cmbW")
-                    aI = pickPseudoRandomTheta(challenge, job['block'].getStringIndex())
-                    aI = number.bytes_to_long(aI)
-                    h = SHA256.new()
-                    wI = W[bIndex]
-                    h.update(wI)
-                    wI = number.bytes_to_long(h.digest())
-                    wI = gmpy2.powmod(wI, aI, N)
                     with cmbLock:
+                        x.startTimer(workerName, "cmbW")
+                        aI = pickPseudoRandomTheta(challenge, job['block'].getStringIndex())
+                        aI = number.bytes_to_long(aI)
+                        h = SHA256.new()
+                        wI = W[bIndex]
+                        h.update(wI)
+                        wI = number.bytes_to_long(h.digest())
+                        wI = gmpy2.powmod(wI, aI, N)
                         cmbValue["w"] *= wI
                         cmbValue["w"] = gmpy2.powmod(cmbValue["w"], 1, N)
                     x.endTimer(workerName, "cmbW")
@@ -92,7 +92,7 @@ def worker(publisherAddr, sinkAddress, k, m, cells, blockAssignments,
                                         lostBlocks, cmbLock, cmbValue, challenge,
                                         W, N))
     
-   # taskThread.daemon = True
+    taskThread.daemon = True
     taskThread.start()
     
     while True:

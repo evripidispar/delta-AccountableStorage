@@ -18,6 +18,7 @@ import psutil
 import os
 import zmq
 import serverProofStage
+import time
 import cPickle
 
 # def proofWorkerTask(inputQueue, blkPbSz, blkDatSz, chlng, lost, T, lock, cVal, N, ibf, g, qSets, TT):
@@ -152,7 +153,10 @@ class ClientSession(object):
         combinedLock = mp.Lock()
         combinedValues = gManager.dict()
         combinedValues["cSum"] = 0L
+        combinedValues["alive"] = 0L
+        combinedValues["all"] = 0L
         combinedValues["cTag"] = 1L
+        
         TT = {}
         
         publisherAddress = "tcp://127.0.0.1:7878"
@@ -183,6 +187,7 @@ class ClientSession(object):
             workersPool.append(p)
         
         print "Waiting to establish workers"
+        time.sleep(5)
         blockStep = 0
         while True:
             dataChunk = fp.read(bytesPerWorker)
@@ -194,6 +199,7 @@ class ClientSession(object):
                     job = cPickle.dumps(job)
                     publishSocket.send_multipart(['work', job])
                     blockStep+=1
+                    
                     if blockStep % 100000 == 0:
                         print "Dispatched ", blockStep, "out of", fsMsg.numBlk
             else:
@@ -224,12 +230,12 @@ class ClientSession(object):
             TT[i["worker"]+str("_cTagKept")] = i["timers"].getTotalTimer(i["worker"], "cTagKept") 
             
         #print "combinedTag", combinedValues["cTag"]
-        #print "combinedSum", combinedValues["cSum"]
+        print "all", combinedValues["all"], "alive", combinedValues["alive"]
      
      
         import pprint
         print "====="
-        pprint.pprint(['Final qSet',qS])
+        
         pprint.pprint("Lost")
         pprint.pprint(self.lost)
         for w in workersPool:

@@ -126,6 +126,9 @@ def processServerProof(cpdrProofMsg, session):
     gManager = mp.Manager()
     cmbW = gManager.dict()
     cmbW["w"] = 1L
+    cmbW["cSum"] = 0L
+    cmbW["all"] = 0L
+    cmbW["alive"] = 0L
     cmbWLock = mp.Lock()
     
     workerPool = []
@@ -144,6 +147,7 @@ def processServerProof(cpdrProofMsg, session):
         workerPool.append(p)
     
     print "Waiting to establish workers"
+    time.sleep(5)
     fp = open(session.fsInfo["fsName"], "rb")
     fp.read(4)
     fp.read(session.fsInfo["skip"])
@@ -203,8 +207,9 @@ def processServerProof(cpdrProofMsg, session):
         
         #print "ratioCheck1", RatioCheck1
         #print "gS", gS
-        pprint.pprint(['final qset', qS])
-        
+        pprint.pprint(['All', cmbW["all"]])
+        pprint.pprint(['Alive', cmbW["alive"]])
+        pprint.pprint(['Result', cmbW["cSum"]==serCombinedSum])
         
         sys.exit(0)
         return False
@@ -241,41 +246,15 @@ def processServerProof(cpdrProofMsg, session):
     #serverStateIbf = session.ibf.generateIbfFromProtobuf(cpdrProofMsg.proof.serverState,
     #                                         session.fsInfo["blkSz"])
     
-    print session.ibf.m()
-    ibf = Ibf(session.ibf.k(), session.ibf.m())
+    #print session.ibf.m()
     
-    serverStateIbf = ibf.generateIbfFromProtobuf(cpdrProofMsg.proof.serverState,
+    serverStateIbf = session.ibf.generateIbfFromProtobuf(cpdrProofMsg.proof.serverState,
                                                  session.fsInfo["blkSz"])
         
-    
-    
-    localIbf = Ibf(session.fsInfo["k"], session.fsInfo["ibfLength"])
-    localIbf.zero(session.fsInfo["blkSz"])
-    
-    start = 0
-    step = 100
-    lc = []
-    while True:
-        res = session.ibf.rangedCells(start,step)
-        if len(res) == 0:
-            break
-        lc+= res
-        start+=step
-        
-    for entry in lc:
-        k,c = entry
-        localIbf.setSingleCell(k, c)
-    
-    #lc = session.ibf.cells()
-    print "-----"
-    #localIbf.setCells(lc)
     et.registerTimer(pName, "subIbf")
     et.startTimer(pName,"subIbf")
-    diffIbf = localIbf.subtractIbf(serverStateIbf, session.challenge,
-                                    session.sesKey.key.n, session.fsInfo["blkSz"], True)
-    #diffIbf = session.ibf.subtractIbf(serverStateIbf, session.challenge,
-    #                               session.sesKey.key.n, session.fsInfo["blkSz"], True)
-
+    diffIbf = session.ibf.subtractIbf(serverStateIbf, session.challenge,
+                                   session.sesKey.key.n, session.fsInfo["blkSz"], True)
     et.endTimer(pName,"subIbf")
     
     for k in lostSum.keys():  
@@ -631,7 +610,7 @@ def main():
     
     result, proofParallelTimers, proofSequentialTimer  = processClientMessages(proofMsg, pdrSes)
     
-    zmqContext.term()
+    #zmqContext.term()
     
     run_results = {}
     

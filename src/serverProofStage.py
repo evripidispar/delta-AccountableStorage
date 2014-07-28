@@ -39,7 +39,7 @@ def serverProofTask(taskQ, endQ, results, workerName, cells, blockAssignments,
             
             job = cPickle.loads(job)
             bIndex = job['index']
-            
+                
             if bIndex not in lostBlocks:
                 x.startTimer(workerName, "ibf_serv")
                 indices = Ibf.getIndices(k, m, hashFunc, job["block"], cellsAssignment=cells)
@@ -108,7 +108,8 @@ def serverProofWorker(publisherAddress, sinkAddress, cells,
     taskThread.daemon = True
     taskThread.start()
     
-    print "Proof Worker", workerName, "initiated"
+    print "Proof Worker", workerName, "initiated "
+    print "blockAssignments", len(blocks)
     while True:
         try:
             workItem = subSocket.recv_multipart()
