@@ -32,7 +32,7 @@ import copy
 
 import cPickle
 import marshal
-import psutil
+import pprint
 import validateServerProofStage
 from HashFunc import Hash1, Hash2, Hash3, Hash4, Hash5, Hash6
 from Queue import Queue
@@ -114,6 +114,8 @@ def processServerProof(cpdrProofMsg, session):
     
     
     servLost = cpdrProofMsg.proof.lostIndeces
+    pprint.pprint("Lost in the server")
+    pprint.pprint(servLost)
     serCombinedSum = long(cpdrProofMsg.proof.combinedSum)
     gS = gmpy2.powmod(session.g, serCombinedSum, session.sesKey.key.n)
     serCombinedTag = long(cpdrProofMsg.proof.combinedTag)
@@ -121,12 +123,9 @@ def processServerProof(cpdrProofMsg, session):
     Te =gmpy2.powmod(serCombinedTag, sesSecret["e"], session.sesKey.key.n)
     et.endTimer(pName, "cmbW-start")
     
-#     inputQueue, blockProtoBufSz, blockDataSz, lost, chlng, W, N, combW, lock
-    
-    
     gManager = mp.Manager()
     cmbW = gManager.dict()
-    cmbW["w"] = 1
+    cmbW["w"] = 1L
     cmbWLock = mp.Lock()
     
     workerPool = []
@@ -158,7 +157,7 @@ def processServerProof(cpdrProofMsg, session):
                     bIndex = block.getDecimalIndex()
                     job = {'index':bIndex, 'block': block}
                     job = cPickle.dumps(job)
-                    session.pubSocket.send_multipart(["job", job])
+                    session.pubSocket.send_multipart(["work", job])
                     blockStep +=1
                     if blockStep % 100000 == 0:
                         print "Dispatched ", blockStep, "out of", session.fsInfo["blockNum"]
@@ -183,7 +182,7 @@ def processServerProof(cpdrProofMsg, session):
     qS = {}
     for i in work:
         for k,v in i["qSets"].items():
-            if k not in qS.items():
+            if k not in qS.keys():
                 qS[k] = []
             qS[k] +=v
         session.TT[i["worker"]+str("_cmbW")] = i["timers"].getTotalTimer(i["worker"], "cmbW")
@@ -199,7 +198,14 @@ def processServerProof(cpdrProofMsg, session):
     
    
     if RatioCheck1 != gS:
+        
         print "FAIL#3: The Proof did not pass the first check to go to recover"
+        
+        #print "ratioCheck1", RatioCheck1
+        #print "gS", gS
+        pprint.pprint(['final qset', qS])
+        
+        
         sys.exit(0)
         return False
 

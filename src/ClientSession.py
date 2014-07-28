@@ -226,6 +226,12 @@ class ClientSession(object):
         #print "combinedTag", combinedValues["cTag"]
         #print "combinedSum", combinedValues["cSum"]
      
+     
+        import pprint
+        print "====="
+        pprint.pprint(['Final qSet',qS])
+        pprint.pprint("Lost")
+        pprint.pprint(self.lost)
         for w in workersPool:
             w.join()
             w.terminate()

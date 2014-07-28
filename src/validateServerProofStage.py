@@ -5,6 +5,7 @@ import cPickle
 import marshal
 import multiprocessing as mp
 import threading
+import pprint
 import BlockEngine as BE
 
 from ExpTimer import ExpTimer
@@ -33,31 +34,35 @@ def validationTask(taskQ, endQ, results, workerName, k, m, hashFunc,
                 break
             
             job = cPickle.loads(job)
-            bIndex = job["index"]
-            if bIndex in lostBlocks and bIndex in blockAssignments:
-                x.startTimer(workerName, "qSet_check")
-                lostIndices = Ibf.getIndices(k, m, hashFunc, 
-                                             job['block'].getStringIndex(), isIndex=True)
-                for lIndex in lostIndices:
-                    if lIndex not in results["qSets"].keys():
-                            results["qSets"][lIndex] = []
-                    results["qSets"][lIndex].append(bIndex)
-                x.endTimer(workerName, "qSet_check")
             
-            elif bIndex not in lostBlocks and bIndex in blockAssignments:
-                x.startTimer(workerName, "cmbW")
-                aI = pickPseudoRandomTheta(challenge, job['block'].getStringIndex())
-                aI = number.bytes_to_long(aI)
-                h = SHA256.new()
-                wI = W[bIndex]
-                h.update(wI)
-                wI = number.bytes_to_long(h.digest())
-                wI = gmpy2.powmod(wI, aI, N)
-                with cmbLock:
-                    cmbValue["w"] *= wI
-                    cmbValue["w"] = gmpy2.powmod(cmbValue["w"], 1, N)
-                x.endTimer(workerName, "cmbW")
+            bIndex = job["index"]
+            if bIndex not in lostBlocks:
+                if bIndex in blockAssignments:
+                    x.startTimer(workerName, "cmbW")
+                    aI = pickPseudoRandomTheta(challenge, job['block'].getStringIndex())
+                    aI = number.bytes_to_long(aI)
+                    h = SHA256.new()
+                    wI = W[bIndex]
+                    h.update(wI)
+                    wI = number.bytes_to_long(h.digest())
+                    wI = gmpy2.powmod(wI, aI, N)
+                    with cmbLock:
+                        cmbValue["w"] *= wI
+                        cmbValue["w"] = gmpy2.powmod(cmbValue["w"], 1, N)
+                    x.endTimer(workerName, "cmbW")
+            else:
+                if bIndex in blockAssignments:
+                    x.startTimer(workerName, "qSet_check")
+                    lostIndices = Ibf.getIndices(k, m, hashFunc, 
+                                                 job['block'].getStringIndex(), isIndex=True)
                     
+                    for lIndex in lostIndices:
+                        if lIndex not in results["qSets"].keys():
+                            results["qSets"][lIndex] = []
+                        results["qSets"][lIndex].append(bIndex)
+                    x.endTimer(workerName, "qSet_check")
+                    
+                       
         except Empty:
             pass
 
@@ -78,6 +83,7 @@ def worker(publisherAddr, sinkAddress, k, m, cells, blockAssignments,
     hashFunc = [Hash1, Hash2, Hash3, Hash4, Hash5, Hash6]
     
     print "Validation worker", workerName , "initiated"
+    print "blockAssignments", len(blockAssignments)
     
     results = {"worker":workerName, "qSets":{}, "timers":None}
     taskThread = threading.Thread(target=validationTask,
@@ -86,7 +92,7 @@ def worker(publisherAddr, sinkAddress, k, m, cells, blockAssignments,
                                         lostBlocks, cmbLock, cmbValue, challenge,
                                         W, N))
     
-    taskThread.daemon = True
+   # taskThread.daemon = True
     taskThread.start()
     
     while True:

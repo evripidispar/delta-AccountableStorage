@@ -5,7 +5,7 @@ import cPickle
 import time
 import threading
 import multiprocessing as mp
-
+import pprint
 
 from ExpTimer import ExpTimer
 from Queue import Queue
@@ -68,6 +68,7 @@ def serverProofTask(taskQ, endQ, results, workerName, cells, blockAssignments,
                     x.startTimer(workerName, "qSet_proof")
                     lostIndices = Ibf.getIndices(k, m, hashFunc, 
                                                  job['block'].getStringIndex(), isIndex=True)
+                    
                     for lIndex in lostIndices:
                         if lIndex not in results["qSets"].keys():
                             results["qSets"][lIndex] = []
