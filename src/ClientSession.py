@@ -16,62 +16,65 @@ from ExpTimer import ExpTimer
 import gmpy2
 import psutil
 import os
+import zmq
+import serverProofStage
+import cPickle
 
-def proofWorkerTask(inputQueue, blkPbSz, blkDatSz, chlng, lost, T, lock, cVal, N, ibf, g, qSets, TT):
-    
-    
-    
-    pName = mp.current_process().name
-    x = ExpTimer()
-    x.registerSession(pName)
-    x.registerTimer(pName, "qSet_proof")
-    x.registerTimer(pName, "cSumKept")
-    x.registerTimer(pName, "cTagKept")
-    x.registerTimer(pName, "ibf_serv")
-    
-    
-    while True:
-        item = inputQueue.get()
-        if item == "END":
-            TT[pName+str("_qSet_proof")] = x.getTotalTimer(pName, "qSet_proof")
-            TT[pName+str("_cSumKept")] = x.getTotalTimer(pName, "cSumKept") - x.getTotalTimer(pName, "ibf_serv")
-            TT[pName+str("_cTagKept")] = x.getTotalTimer(pName, "cTagKept") - x.getTotalTimer(pName, "ibf_serv")
-            TT[pName+str("_ibf_serv")] = x.getTotalTimer(pName, "ibf_serv")
-            return
-        
-        for blockPbItem in BE.chunks(item,blkPbSz):
-            block = BE.BlockDisk2Block(blockPbItem, blkDatSz)
-            bIndex = block.getDecimalIndex()
-            if bIndex in lost:
-                x.startTimer(pName, "qSet_proof")
-                binBlockIndex = block.getStringIndex()
-                indices = ibf.getIndices(binBlockIndex, True)
-                for i in indices:
-                    with lock:
-                        qSets.addValue(i, bIndex)
+# def proofWorkerTask(inputQueue, blkPbSz, blkDatSz, chlng, lost, T, lock, cVal, N, ibf, g, qSets, TT):
+#     
+#     pName = mp.current_process().name
+#     x = ExpTimer()
+#     x.registerSession(pName)
+#     x.registerTimer(pName, "qSet_proof")
+#     x.registerTimer(pName, "cSumKept")
+#     x.registerTimer(pName, "cTagKept")
+#     x.registerTimer(pName, "ibf_serv")
+#     
+#     
+#     while True:
+#         item = inputQueue.get()
+#         if item == "END":
+#             TT[pName+str("_qSet_proof")] = x.getTotalTimer(pName, "qSet_proof")
+#             TT[pName+str("_cSumKept")] = x.getTotalTimer(pName, "cSumKept") - x.getTotalTimer(pName, "ibf_serv")
+#             TT[pName+str("_cTagKept")] = x.getTotalTimer(pName, "cTagKept") - x.getTotalTimer(pName, "ibf_serv")
+#             TT[pName+str("_ibf_serv")] = x.getTotalTimer(pName, "ibf_serv")
+#             return
+#         
+#         for blockPbItem in BE.chunks(item,blkPbSz):
+#             block = BE.BlockDisk2Block(blockPbItem, blkDatSz)
+#             bIndex = block.getDecimalIndex()
+#             if bIndex in lost:
+#                 x.startTimer(pName, "qSet_proof")
+#                 binBlockIndex = block.getStringIndex()
+#                 indices = ibf.getIndices(binBlockIndex, True)
+#                 for i in indices:
+#                     with lock:
+#                         qSets.addValue(i, bIndex)
+#                 
+#                 x.endTimer(pName, "qSet_proof")    
+#                 del block
+#                 continue
+#             x.startTimer(pName, "cSumKept")
+#             x.startTimer(pName, "cTagKept")
+#             aI = pickPseudoRandomTheta(chlng, block.getStringIndex())
+#             aI = number.bytes_to_long(aI)
+#             bI = number.bytes_to_long(block.data.tobytes())
+#             
+#             
+#             with lock:
+#                 x.startTimer(pName, "ibf_serv")
+#          
+#                 ibf.insert(block, chlng, N, g, True)
+#                 x.endTimer(pName, "ibf_serv")
+#                 cVal["cSum"] += (aI*bI)
+#                 x.endTimer(pName,"cSumKept")
+#                 cVal["cTag"] *= gmpy2.powmod(T[bIndex], aI, N)
+#                 cVal["cTag"] = gmpy2.powmod(cVal["cTag"],1,N)
+#                 x.endTimer(pName,"cTagKept")
+#             del block    
                 
-                x.endTimer(pName, "qSet_proof")    
-                del block
-                continue
-            x.startTimer(pName, "cSumKept")
-            x.startTimer(pName, "cTagKept")
-            aI = pickPseudoRandomTheta(chlng, block.getStringIndex())
-            aI = number.bytes_to_long(aI)
-            bI = number.bytes_to_long(block.data.tobytes())
-            
-            
-            with lock:
-                x.startTimer(pName, "ibf_serv")
-         
-                ibf.insert(block, chlng, N, g, True)
-                x.endTimer(pName, "ibf_serv")
-                cVal["cSum"] += (aI*bI)
-                x.endTimer(pName,"cSumKept")
-                cVal["cTag"] *= gmpy2.powmod(T[bIndex], aI, N)
-                cVal["cTag"] = gmpy2.powmod(cVal["cTag"],1,N)
-                x.endTimer(pName,"cTagKept")
-            del block    
-                
+
+
 
 
 class ClientSession(object):
@@ -80,7 +83,8 @@ class ClientSession(object):
     BLOCK_INDEX_LEN=32
     BLOCKS_PER_WORKER=20
     
-    def __init__(self, N, g, tagMsg, delta, k, fs, blkNum, runId):
+    def __init__(self, N, g, tagMsg, delta, k, fs, 
+                 blkNum, runId, context, numWorkers):
         self.clientKeyN = N
         self.clientKeyG = g
         self.T = {}
@@ -94,6 +98,9 @@ class ClientSession(object):
         self.fsBlocksNum = blkNum
         self.populateTags(tagMsg)
         self.runId = str(runId)
+        self.context = context
+        self.numWorkers = numWorkers
+        
         
     def populateTags(self, tagMsg):
         
@@ -141,62 +148,81 @@ class ClientSession(object):
         bytesPerWorker = (self.BLOCKS_PER_WORKER*totalBlockBytes) / fsMsg.numBlk
                 
         gManager = mp.Manager()
-        pdrManager = IbfManager()
-        qSetManager = QSetManager()
-        blockBytesQueue = mp.Queue(self.WORKERS)
-        TT = gManager.dict()
+        
         combinedLock = mp.Lock()
         combinedValues = gManager.dict()
         combinedValues["cSum"] = 0L
         combinedValues["cTag"] = 1L
+        TT = {}
         
+        publisherAddress = "tcp://127.0.0.1:8888"
+        sinkAddress = "tcp://127.0.0.1:8889"
+        publishSocket = self.context.socket(zmq.PUB)
+        publishSocket.bind(publisherAddress)
+        sinkSocket = self.context.socket(zmq.REP)
+        sinkSocket.bind(sinkAddress)
         
-        pdrManager.start()
-        qSetManager.start()
+        cellAssignments = BE.chunkAlmostEqual(range(ibfLength), self.numWorkers)
+        blockAssignments = BE.chunkAlmostEqual(range(fsMsg.numBlk), self.numWorkers)
+        workersPool = []
         
-        ibf = pdrManager.Ibf(self.k, ibfLength)
-        try:      
-            ibf.zero(fsMsg.datSize)
-        except OSError as e:
-            print str(e)
-            p = psutil.Process(os.getpid())
-            p.get_open_files()
-            
-        
-        qSets = qSetManager.QSet()
-        
-        workerPool = []
-        for i in xrange(self.WORKERS):
-            p = mp.Process(target=proofWorkerTask,
-                           args=(blockBytesQueue, fsMsg.pbSize, 
-                                 fsMsg.datSize, self.challenge, self.lost,
-                                 self.T, combinedLock, 
-                                 combinedValues, self.clientKeyN, 
-                                 ibf, self.clientKeyG, qSets,TT))
-                           
+        for w,cellsPerW,blocksPerW in zip(xrange(self.numWorkers),
+                                          cellAssignments, blockAssignments):
+            p = mp.Process(target=serverProofStage.serverProofWorker,
+                           args=(publisherAddress, sinkAddress,
+                                  cellsPerW, blocksPerW, self.challenge,
+                                  self.lost, self.T, combinedLock, 
+                                  combinedValues, self.clientKeyN,
+                                  self.clientKeyG, self.k, ibfLength,
+                                  fsMsg.datSize))
             p.start()
-            workerPool.append(p)
+            workersPool.append(p)
         
+        print "Waiting to establish workers"
+        blockStep = 0
         while True:
-            chunk = fp.read(bytesPerWorker)
-            if chunk:
-                blockBytesQueue.put(chunk)
+            dataChunk = fp.read(bytesPerWorker)
+            if dataChunk:
+                for blockPBItem in BE.chunks(dataChunk, fsMsg.pbSize):
+                    block = BE.BlockDisk2Block(blockPBItem, fsMsg.datSize)
+                    bIndex = block.getDecimalIndex()
+                    job = {'index':bIndex, 'block':block}
+                    job = cPickle.dumps(job)
+                    publishSocket.send_multipart(['job', job])
+                    blockStep+=1
+                    if blockStep % 100000 == 0:
+                        print "Dispatched ", blockStep, "out of", fsMsg.numBlk
             else:
-                for j in xrange(self.WORKERS):
-                    blockBytesQueue.put("END")
-                break
-        
-        for p in workerPool:
-            p.join()
-        
-        for p in workerPool:
-            p.terminate()    
+                publishSocket.send_multipart(['end'])
         
         fp.close()
-        #print "combinedTag", combinedValues["cTag"]
-        #print "combinedSum", combinedValues["cSum"]
+        work = []
+        print "Waiting to gather results"
+        while len(work) != self.numWorkers:
+            w = sinkSocket.recv_pyobj()
+            work.append(w)
+            
+        for w in workersPool:
+            w.join()
+            w.terminate()
+        
+        serverIbf = Ibf(self.k, ibfLength)
+        qS = {}
+        for i in work:
+            serverIbf.cells.update(i["cells"])
+            for k,v in i["qSets"].items():
+                if k not in qS.keys():
+                    qS[k] = []
+                qS[k] += v
+                
+            TT[i["worker"]+str("_qSet_proof")] = i["timers"].getTotalTimer(i["worker"], "qSet_proof")                         
+            TT[i["worker"]+str("_ibf_serv")] = i["timers"].getTotalTimer(i["worker"], "ibf_serv")
+            TT[i["worker"]+str("_cSumKept")] = i["timers"].getTotalTimer(i["worker"], "cSumKept") 
+            TT[i["worker"]+str("_cTagKept")] = i["timers"].getTotalTimer(i["worker"], "cTagKept") 
+            
+        print "combinedTag", combinedValues["cTag"]
+        print "combinedSum", combinedValues["cSum"]
      
-        qS = qSets.qSets()
         et.startTimer(pName, "cmbLost")
         combinedLostTags = {}
         for k in qS.keys():
@@ -208,7 +234,7 @@ class ClientSession(object):
                  
             for v in val:
                 print "Indices in Qset", v
-                binV  = ibf.binPadLostIndex(v)
+                binV  = serverIbf.binPadLostIndex(v)
                 aBlk = pickPseudoRandomTheta(self.challenge, binV)
                 aI = number.bytes_to_long(aBlk)
                 lostTag=gmpy2.powmod(self.T[v], aI, self.clientKeyN)
@@ -221,7 +247,7 @@ class ClientSession(object):
         start = 0
         step = 500
         while True:
-            res = ibf.rangedCells(start,step)
+            res =serverIbf.rangedCells(start,step)
             if len(res) == 0:
                 break
             ibfCells+= res
@@ -232,8 +258,7 @@ class ClientSession(object):
                                             ibfCells, 
                                             self.lost ,
                                             combinedLostTags)
-
-#         et, TT          
+ 
         run_results = {}
         run_results['proof-size'] = len(proofMsg)
         for k in TT.keys():

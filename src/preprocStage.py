@@ -81,7 +81,12 @@ def preprocWorker(publisherAddr, sinkAddr, cells, k, m,
 
     
     print "PreprocWorker", workerName , "initiated"
-    results = {"worker":workerName, "cells":{}, "w":{}, "tags":{}, "timers":None}
+    results = None
+    if noTags == False:
+        results = {"worker":workerName, "cells":{}, "w":{}, "tags":{}, "timers":None}
+    else:
+        results = {"worker":workerName, "cells":{}, "w":{}, "timers":None}
+        
     taskThread = threading.Thread(target=preprocTask, 
                                   args=(taskQ, endQ, results, workerName, k, m, hashFunc, blockSz, 
                                         secret, public, hashProdOne,

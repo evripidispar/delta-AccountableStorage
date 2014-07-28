@@ -8,7 +8,7 @@ from ClientSession import ClientSession
 
 clients = {}
 
-def processInitMessage(cpdrMsg, storeBlocks=None):
+def processInitMessage(cpdrMsg, context, workersNum, storeBlocks=None):
     
     print "Processing Init Message"
     cltName = cpdrMsg.cltId
@@ -20,7 +20,7 @@ def processInitMessage(cpdrMsg, storeBlocks=None):
         fs = cpdrMsg.init.filesystem
         blkNum = cpdrMsg.init.fsNumBlocks
         runId = cpdrMsg.init.runId
-        clients[cltName] = ClientSession(N, g, cpdrMsg.init.tc, delta, k, fs, blkNum, runId)
+        clients[cltName] = ClientSession(N, g, cpdrMsg.init.tc, delta, k, fs, blkNum, runId, context, workersNum)
         
     initAck = MU.constructInitAckMessage()
     return initAck
@@ -44,7 +44,7 @@ def processLostMessage(cpdrMsg):
     lossAck = MU.constructLostAckMessage()
     return lossAck
 
-def procMessage(incoming):
+def procMessage(incoming, context, workersNum):
     
     print "Processing incoming message..."
     
@@ -52,7 +52,7 @@ def procMessage(incoming):
     
     
     if cpdrMsg.type == CloudPdrMessages_pb2.CloudPdrMsg.INIT:
-        initAck = processInitMessage(cpdrMsg)
+        initAck = processInitMessage(cpdrMsg, context, workersNum)
         return initAck
     
     elif cpdrMsg.type == CloudPdrMessages_pb2.CloudPdrMsg.LOSS:
@@ -67,14 +67,14 @@ def procMessage(incoming):
     
         
         
-def serve(port):
+def serve(port, workersNum):
     context = zmq.Context()
     socket = context.socket(zmq.REP)
     socket.bind("tcp://*:"+str(port))
 
     while True:
         msg = socket.recv()
-        outMessage = procMessage(msg)
+        outMessage = procMessage(msg, context, workersNum)
         socket.send(outMessage)
 
 def main():
@@ -83,11 +83,14 @@ def main():
 
     p.add_argument('-p', dest='port', action='store', default=9090,
                    help='CloudPdr server port')
+
+    
+    p.add_argument('-w', dest='workersNum', action='store', default=2,
+                   help='Number of workers')
+
     
     args = p.parse_args()
-    
-    
-    serve(args.port)
+    serve(args.port, args.workersNum)
 
 if __name__ == "__main__":
     main()

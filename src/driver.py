@@ -3,6 +3,7 @@ import sys
 from BlockUtil import *
 from Ibf import *
 import zmq
+import preprocStage
 
 import CloudPdrFuncs
 import os
@@ -34,7 +35,7 @@ import psutil
 from HashFunc import Hash1, Hash2, Hash3, Hash4, Hash5, Hash6
 from Queue import Queue
 from Queue import Empty
-from preprocStage import preprocWorker
+
 
 LOST_BLOCKS = 6
 
@@ -63,42 +64,6 @@ def subsetAndLessThanDelta(clientMaxBlockId, serverLost, delta):
         return (False, "FAIL#2: Server has lost more than DELTA blocks")
     return (True, "")
 
-
-
-
-def workerTask(inputQueue,W,T,ibf,blockProtoBufSz,blockDataSz,secret,public, TT, noTags, lock):
-    
-    pName = mp.current_process().name
-    x = ExpTimer()
-    x.registerSession(pName)
-    x.registerTimer(pName, "tag")
-    x.registerTimer(pName, "ibf")
-    
-    while True:
-        item = inputQueue.get()
-        if item == "END":
-            TT[pName+str("_tag")] = x.getTotalTimer(pName, "tag")
-            TT[pName+str("_ibf")] = x.getTotalTimer(pName, "ibf")
-            return
-        
-        for blockPBItem in BE.chunks(item, blockProtoBufSz):
-            block = BE.BlockDisk2Block(blockPBItem, blockDataSz)
-            bIndex = block.getDecimalIndex()
-            x.startTimer(pName, "tag")
-            w = singleW(block, secret["u"])
-            if noTags == False:
-                tag = singleTag(w, block, public["g"], secret["d"], public["n"])
-                x.endTimer(pName, "tag")
-                T[bIndex] = tag
-                
-            W[bIndex] = w
-            
-            
-            x.startTimer(pName, "ibf")
-            with lock:
-                ibf.insert(block, None, public["n"], public["g"], True)
-            x.endTimer(pName, "ibf")
-            del block
 
 
 
@@ -469,8 +434,7 @@ def main():
         
     #Generate client id
     cltId = produceClientId()
-       
-   
+    
     #Create current session
     pdrSes = PdrSession(cltId)
     
@@ -480,7 +444,6 @@ def main():
     g = long(g)
     fp.close() 
     pdrSes.addG(g)
-    
     
     loadedTags = None
     loadedKey = None
@@ -530,22 +493,9 @@ def main():
     pdrSes.addFsInfo(fs.numBlk, fs.pbSize, fs.datSize, int(fsSize), 
                      bytesPerWorker, args.workers, args.blkFp, ibfLength, args.hashNum)
     
-    genericManager = mp.Manager()
+    
     pdrManager = IbfManager()
-    InsertLock = mp.Lock()
-    
-    blockByteChunks = genericManager.Queue(args.workers)
-    W = genericManager.dict()
-    T = genericManager.dict()
-    TT = genericManager.dict()
-    
     pdrManager.start()
-    ibf = pdrManager.Ibf(args.hashNum, ibfLength)
-    try:      
-        ibf.zero(fs.datSize)
-    except OSError:
-        p = psutil.Process(os.getpid())
-        p.get_open_files()
     
     zmqContext =  zmq.Context()
     publisherAddress = "tcp://127.0.0.1:9998"
@@ -563,11 +513,9 @@ def main():
     cellAssignments = BE.chunkAlmostEqual(range(ibfLength), args.workers)
     blocksAssignments = BE.chunkAlmostEqual(range(fs.numBlk), args.workers)
 
-    
-    
     for w,cellsPerW,blocksPerW in zip(xrange(args.workers), cellAssignments, blocksAssignments):
         print "worker",  w, "cells", len(cellsPerW), "Blocks", len(blocksPerW)
-        p = mp.Process(target=preprocWorker,
+        p = mp.Process(target=preprocStage.preprocWorker,
                        args=(publisherAddress, sinkAddress, cellsPerW, 
                              args.hashNum, ibfLength, fs.datSize,
                              secret, public, True, 
@@ -591,84 +539,56 @@ def main():
                 publishSocket.send_multipart(['work', job])
                 blockStep+=1
                 if (blockStep  % 100000) == 0:
-                    print "Dispatched ", blockStep, "out of", fs.numBlk
-                #    time.sleep(10)
-                
-                
-                
+                    print "Dispatched ", blockStep, "out of", fs.numBlk     
         else:
             publishSocket.send_multipart(["end"])
             break
         
-    
+    fp.close()
     work = []
     print 'Waiting'
     while len(work) != args.workers:
             w = sinkSocket.recv_pyobj()
             sinkSocket.send("ACK")
             work.append(w)
-            if len(work) == len(workersPool):
-                print 'Break'
-                   
-        
+           
+    
+    pdrSes.W = {}
+    
+    
+    localIbf = Ibf(args.hashNum, ibfLength)    
+    if doNotComputeTags == False:
+        pdrSes.T= {}
     
     for i in work:
-        
-        print i["worker"], i["blocksExamined"]
-        #i = cPickle.loads(i[1])
+        pdrSes.W.update(i["w"])
+        localIbf.cells.update(i["cells"])
+        if "tags" in i.keys():
+            pdrSes.T.update(i["tags"])
+        pdrSes.TT[i["worker"]+str("_tag")] = i["timers"].getTotalTimer(i["worker"], "tag")
+        pdrSes.TT[i["worker"]+str("_ibf")] = i["timers"].getTotalTimer(i["worker"], "ibf")
+        print i["worker"], i["blocksExamined"], i["w"].keys(), len(i["w"].keys()), len(pdrSes.W.keys()), len(localIbf.cells.keys()), ibfLength
         #x = i["timers"].getTotalTimer(i["worker"], "ibf")
-        #if maxIbf < x:
-        #    maxIbf = x
         
+    pdrSes.addState(localIbf) 
+    if doNotComputeTags == True:
+        pdrSes.T = loadedTags
+    
+    
     for worker in workersPool:
         worker.join()
         worker.terminate()
         
     
-    sys.exit(0)
-    ##################
-    pool = []
-    for i in xrange(args.workers):
-        p = mp.Process(target=workerTask, args=(blockByteChunks,W,T,ibf,fs.pbSize,fs.datSize,secret,public, TT, doNotComputeTags, InsertLock))
-        p.start()
-        pool.append(p)
-    
-    while True:
-        chunk = fp.read(bytesPerWorker)
-        if chunk:
-            blockByteChunks.put(chunk)
-        else:
-            for j in xrange(args.workers):
-                blockByteChunks.put("END")
-            break
-    
-    for p in pool:
-        p.join()
-        
-    for p in pool:
-        p.terminate()
-        
-        
-    fp.close()
-    if doNotComputeTags == True:
-        T =  loadedTags
-     
-    
-    if args.tagMode == True:
-        print "TAGMODE TRUE"
-        saveTagsForLater(TT, T, pdrSes.sesKey.key, fs.numBlk, fs.datSize)
-    
-    pdrSes.addState(ibf)
-    pdrSes.W = W
-    
-    
-        
+ 
+ 
     pdrSes.addDelta(delta)
 
-    sizeTag = getsizeofDictionary(T)
+    sizeTag = getsizeofDictionary(pdrSes.T)
 
-    initMsg = MU.constructInitMessage(pubPB, args.blkFp,
-                                               T, cltId, args.hashNum, delta, fs.numBlk, args.runId)
+    initMsg = MU.constructInitMessage(pubPB, args.blkFp, pdrSes.T,
+                                      cltId, args.hashNum, delta,
+                                       fs.numBlk, args.runId)
 
     #ip = "10.109.173.162"
     ip = "127.0.0.1"
@@ -680,17 +600,18 @@ def main():
     initAck = clt.rpc(ip, 9090, initMsg) 
     print "Received Initialization ACK"
     
-    
     lostMsg = processClientMessages(initAck, pdrSes, args.lostNum)
     print "Sending Lost message"
     lostAck = clt.rpc(ip, 9090, lostMsg)
     print "Received Lost-Ack message"
     
     
+    
     challengeMsg = processClientMessages(lostAck, pdrSes)
     print "Sending Challenge message"
     proofMsg = clt.rpc(ip, 9090, challengeMsg)
     print "Received Proof message"
+    sys.exit(0)
     result, proofParallelTimers, proofSequentialTimer  = processClientMessages(proofMsg, pdrSes)
     
     zmqContext.term()

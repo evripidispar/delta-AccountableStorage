@@ -8,13 +8,15 @@ class PdrSession(object):
     CHALLENGE=2
     PROOF=3
 
-    def __init__(self, cltId,key=None, W=None, blocks=None, challenge=None):
+    def __init__(self, cltId,key=None, W=None, blocks=None, challenge=None, T=None):
         self.sesKey = key
         self.W = W
         self.blocks = blocks
         self.challenge = challenge
         self.state = self.INIT
         self.cltId = cltId
+        self.T = T
+        self.TT = {}
         
     def addSecret(self, secret):
         self.secret = secret
@@ -27,6 +29,9 @@ class PdrSession(object):
         
     def addG(self, g):
         self.g = g
+    
+    def addTags(self, T):
+        self.T = T
         
     def addDataBitSize(self, dataBitSize):
         self.dataBitSize =  dataBitSize
