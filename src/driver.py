@@ -43,6 +43,8 @@ LOST_BLOCKS = 6
 
 W = {}
 Tags = {}
+ssss = time.time()
+eeee = None
 
 def clientWorkerProof(inputQueue, blockProtoBufSz, blockDataSz, lost, chlng, W, N, comb, lock, qSets, ibf, manager, TT):
     
@@ -114,8 +116,8 @@ def processServerProof(cpdrProofMsg, session):
     
     
     servLost = cpdrProofMsg.proof.lostIndeces
-    pprint.pprint("Lost in the server")
-    pprint.pprint(servLost)
+    
+    
     serCombinedSum = long(cpdrProofMsg.proof.combinedSum)
     gS = gmpy2.powmod(session.g, serCombinedSum, session.sesKey.key.n)
     serCombinedTag = long(cpdrProofMsg.proof.combinedTag)
@@ -128,7 +130,9 @@ def processServerProof(cpdrProofMsg, session):
     cmbW["w"] = 1L
     cmbW["cSum"] = 0L
     cmbW["all"] = 0L
+    cmbW["all_count"] = 0L
     cmbW["alive"] = 0L
+    cmbW["alive_count"] = 0L
     cmbWLock = mp.Lock()
     
     workerPool = []
@@ -200,16 +204,21 @@ def processServerProof(cpdrProofMsg, session):
     RatioCheck1=Te*combinedWInv
     RatioCheck1 = gmpy2.powmod(RatioCheck1, 1, session.sesKey.key.n)
     
+    pprint.pprint(["Lost in the server", len(servLost)])
+    pprint.pprint(['All', cmbW["all"]])
+    pprint.pprint(['All count', cmbW["all_count"]])
+    pprint.pprint(['Alive', cmbW["alive"]])
+    pprint.pprint(['Alive_count', cmbW["alive_count"]])
+    pprint.pprint(['Result', cmbW["cSum"] == serCombinedSum])
    
     if RatioCheck1 != gS:
         
         print "FAIL#3: The Proof did not pass the first check to go to recover"
         
-        #print "ratioCheck1", RatioCheck1
-        #print "gS", gS
-        pprint.pprint(['All', cmbW["all"]])
-        pprint.pprint(['Alive', cmbW["alive"]])
-        pprint.pprint(['Result', cmbW["cSum"]==serCombinedSum])
+        print "ratioCheck1", RatioCheck1
+        print "gS", gS
+        eeee = time.time()
+        print eeee-ssss
         
         sys.exit(0)
         return False
@@ -476,9 +485,11 @@ def main():
 #     ibfLength =  floor(log(fs.numBlk,2))
     log2Blocks = log(fs.numBlk, 2)
     log2Blocks = floor(log2Blocks)
-    delta = int(log2Blocks) 
+    delta = int(log2Blocks)
+    print args.dt  
     if args.dt == 1:
-        delta = int(floor(sqrt(fs.numBlk))) 
+        delta = int(floor(sqrt(fs.numBlk)))
+        args.lostNum = random.choice(range(delta))
     
     ibfLength = ((args.hashNum+1)*delta)
     ibfLength = int(ibfLength)
@@ -651,4 +662,6 @@ def main():
     
     
 if __name__ == "__main__":
+    
     main()
+    

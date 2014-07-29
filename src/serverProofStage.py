@@ -5,7 +5,7 @@ import cPickle
 import time
 import threading
 import multiprocessing as mp
-import pprint
+
 
 from ExpTimer import ExpTimer
 from Queue import Queue
@@ -27,7 +27,7 @@ def serverProofTask(taskQ, endQ, results, workerName, cells, blockAssignments,
     x.registerTimer(workerName, "cSumKept")
     x.registerTimer(workerName, "cTagKept")
     x.registerTimer(workerName, "ibf_serv")
-    
+    startIndex = False
     while True:
         try:
             job = taskQ.get()
@@ -39,8 +39,13 @@ def serverProofTask(taskQ, endQ, results, workerName, cells, blockAssignments,
             
             job = cPickle.loads(job)
             bIndex = job['index']
-                
+            if startIndex == False:
+                print "Worker-Task starts with block index", bIndex
+                startIndex = True
+            
             if bIndex not in lostBlocks:
+                if bIndex % 25000 == 0 and bIndex > 0:
+                    print "Worker", workerName, bIndex
                 x.startTimer(workerName, "ibf_serv")
                 indices = Ibf.getIndices(k, m, hashFunc, job["block"], cellsAssignment=cells)
                 for i in indices:
@@ -50,18 +55,17 @@ def serverProofTask(taskQ, endQ, results, workerName, cells, blockAssignments,
                 x.endTimer(workerName, "ibf_serv")
                 
                 if bIndex in blockAssignments:
-                
+                    x.startTimer(workerName, "cSumKept")    
+                    x.startTimer(workerName, "cTagKept")
+                    aI = pickPseudoRandomTheta(challenge, job['block'].getStringIndex())
+                    aI = number.bytes_to_long(aI)
+                    bI = number.bytes_to_long(job['block'].data.tobytes())
                     with cmbLock:
-                        x.startTimer(workerName, "cSumKept")
-                        x.startTimer(workerName, "cTagKept")
-                        aI = pickPseudoRandomTheta(challenge, job['block'].getStringIndex())
-                        aI = number.bytes_to_long(aI)
-                        bI = number.bytes_to_long(job['block'].data.tobytes())
                         cmbVal["cSum"] += aI*bI
                         x.endTimer(workerName, "cSumKept")
                         cmbVal["cTag"] *= gmpy2.powmod(tags[bIndex], aI, N)
                         cmbVal["cTag"] = gmpy2.powmod(cmbVal["cTag"],1,N)
-                        x.endTimer(workerName,"cTagKept")
+                    x.endTimer(workerName,"cTagKept")
                         
             else:
                 if bIndex in blockAssignments:

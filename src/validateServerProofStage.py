@@ -2,11 +2,8 @@
 import zmq
 import gmpy2
 import cPickle
-import marshal
 import multiprocessing as mp
 import threading
-import pprint
-import BlockEngine as BE
 
 from ExpTimer import ExpTimer
 from Ibf import Ibf
@@ -21,12 +18,14 @@ def validationTask(taskQ, endQ, results, workerName, k, m, hashFunc,
                    challenge, W, N):
     
     x = ExpTimer()
+    
     x.registerSession(workerName)
     x.registerTimer(workerName, "cmbW")
     x.registerTimer(workerName, "qSet_check")
-    
+    startIndex = False
     while True:
         try:
+            
             job = taskQ.get()
             if job == "end":
                 results["timers"] = x
@@ -34,19 +33,25 @@ def validationTask(taskQ, endQ, results, workerName, k, m, hashFunc,
                 break
             
             job = cPickle.loads(job)
-            
             bIndex = job["index"]
+            if startIndex == False:
+                print "Worker-Task starts with block index", bIndex
+                startIndex = True
+                
             if bIndex not in lostBlocks:
+                if bIndex % 25000 == 0 and bIndex > 0:
+                    print "Worker", workerName, bIndex
                 if bIndex in blockAssignments:
+                    x.startTimer(workerName, "cmbW")
+                    aI = pickPseudoRandomTheta(challenge, job['block'].getStringIndex())
+                    aI = number.bytes_to_long(aI)
+                    h = SHA256.new()
+                    wI = W[bIndex]
+                    h.update(wI)
+                    wI = number.bytes_to_long(h.digest())
+                    wI = gmpy2.powmod(wI, aI, N)
+                    
                     with cmbLock:
-                        x.startTimer(workerName, "cmbW")
-                        aI = pickPseudoRandomTheta(challenge, job['block'].getStringIndex())
-                        aI = number.bytes_to_long(aI)
-                        h = SHA256.new()
-                        wI = W[bIndex]
-                        h.update(wI)
-                        wI = number.bytes_to_long(h.digest())
-                        wI = gmpy2.powmod(wI, aI, N)
                         cmbValue["w"] *= wI
                         cmbValue["w"] = gmpy2.powmod(cmbValue["w"], 1, N)
                     x.endTimer(workerName, "cmbW")
@@ -71,15 +76,14 @@ def worker(publisherAddr, sinkAddress, k, m, cells, blockAssignments,
     
     workerName = mp.current_process().name
     
-    
     taskQ = Queue()
     endQ = Queue()
-    
     context = zmq.Context()
     subSocket = context.socket(zmq.SUB)
     subSocket.setsockopt(zmq.SUBSCRIBE, b'work')
     subSocket.setsockopt(zmq.SUBSCRIBE, b'end')
     subSocket.connect(publisherAddr)
+    
     hashFunc = [Hash1, Hash2, Hash3, Hash4, Hash5, Hash6]
     
     print "Validation worker", workerName , "initiated"
@@ -99,14 +103,15 @@ def worker(publisherAddr, sinkAddress, k, m, cells, blockAssignments,
         try:
             workItem = subSocket.recv_multipart()
             if workItem[0] == "end":
-                taskQ.put_nowait("end")
+                taskQ.put("end")
                 res = endQ.get(True)
                 rpc = RpcPdrClient(context)
                 inMsg = rpc.rpcAddress(sinkAddress, res)
                 if inMsg == "ACK":
                     break
             else:
-                taskQ.put_nowait(workItem[1])
+                taskQ.put(workItem[1])
+                
         except zmq.ZMQError as e:
             print e
         except (RuntimeError, TypeError, NameError) as e:

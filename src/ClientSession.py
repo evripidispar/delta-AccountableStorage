@@ -20,63 +20,7 @@ import zmq
 import serverProofStage
 import time
 import cPickle
-
-# def proofWorkerTask(inputQueue, blkPbSz, blkDatSz, chlng, lost, T, lock, cVal, N, ibf, g, qSets, TT):
-#     
-#     pName = mp.current_process().name
-#     x = ExpTimer()
-#     x.registerSession(pName)
-#     x.registerTimer(pName, "qSet_proof")
-#     x.registerTimer(pName, "cSumKept")
-#     x.registerTimer(pName, "cTagKept")
-#     x.registerTimer(pName, "ibf_serv")
-#     
-#     
-#     while True:
-#         item = inputQueue.get()
-#         if item == "END":
-#             TT[pName+str("_qSet_proof")] = x.getTotalTimer(pName, "qSet_proof")
-#             TT[pName+str("_cSumKept")] = x.getTotalTimer(pName, "cSumKept") - x.getTotalTimer(pName, "ibf_serv")
-#             TT[pName+str("_cTagKept")] = x.getTotalTimer(pName, "cTagKept") - x.getTotalTimer(pName, "ibf_serv")
-#             TT[pName+str("_ibf_serv")] = x.getTotalTimer(pName, "ibf_serv")
-#             return
-#         
-#         for blockPbItem in BE.chunks(item,blkPbSz):
-#             block = BE.BlockDisk2Block(blockPbItem, blkDatSz)
-#             bIndex = block.getDecimalIndex()
-#             if bIndex in lost:
-#                 x.startTimer(pName, "qSet_proof")
-#                 binBlockIndex = block.getStringIndex()
-#                 indices = ibf.getIndices(binBlockIndex, True)
-#                 for i in indices:
-#                     with lock:
-#                         qSets.addValue(i, bIndex)
-#                 
-#                 x.endTimer(pName, "qSet_proof")    
-#                 del block
-#                 continue
-#             x.startTimer(pName, "cSumKept")
-#             x.startTimer(pName, "cTagKept")
-#             aI = pickPseudoRandomTheta(chlng, block.getStringIndex())
-#             aI = number.bytes_to_long(aI)
-#             bI = number.bytes_to_long(block.data.tobytes())
-#             
-#             
-#             with lock:
-#                 x.startTimer(pName, "ibf_serv")
-#          
-#                 ibf.insert(block, chlng, N, g, True)
-#                 x.endTimer(pName, "ibf_serv")
-#                 cVal["cSum"] += (aI*bI)
-#                 x.endTimer(pName,"cSumKept")
-#                 cVal["cTag"] *= gmpy2.powmod(T[bIndex], aI, N)
-#                 cVal["cTag"] = gmpy2.powmod(cVal["cTag"],1,N)
-#                 x.endTimer(pName,"cTagKept")
-#             del block    
-                
-
-
-
+import pprint
 
 class ClientSession(object):
     
@@ -154,7 +98,9 @@ class ClientSession(object):
         combinedValues = gManager.dict()
         combinedValues["cSum"] = 0L
         combinedValues["alive"] = 0L
+        combinedValues["alive_count"] = 0L
         combinedValues["all"] = 0L
+        combinedValues["all_count"] = 0L
         combinedValues["cTag"] = 1L
         
         TT = {}
@@ -230,13 +176,15 @@ class ClientSession(object):
             TT[i["worker"]+str("_cTagKept")] = i["timers"].getTotalTimer(i["worker"], "cTagKept") 
             
         #print "combinedTag", combinedValues["cTag"]
-        print "all", combinedValues["all"], "alive", combinedValues["alive"]
+        pprint.pprint(['All', combinedValues["all"]])
+        pprint.pprint(['All count', combinedValues["all_count"]])
+        pprint.pprint(['Alive', combinedValues["alive"]])
+        pprint.pprint(['Alive_count', combinedValues["alive_count"]])
+    
      
-     
-        import pprint
         print "====="
         
-        pprint.pprint("Lost")
+        pprint.pprint(["Lost", len(self.lost)])
         pprint.pprint(self.lost)
         for w in workersPool:
             w.join()
