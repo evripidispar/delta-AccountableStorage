@@ -525,7 +525,6 @@ def main():
     blocksAssignments = BE.chunkAlmostEqual(range(fs.numBlk), args.workers)
 
     for w,cellsPerW,blocksPerW in zip(xrange(args.workers), cellAssignments, blocksAssignments):
-        #print "worker",  w, "cells", len(cellsPerW), "Blocks", len(blocksPerW)
         p = mp.Process(target=preprocStage.preprocWorker,
                        args=(publisherAddress, sinkAddress, cellsPerW, 
                              args.hashNum, ibfLength, fs.datSize,
@@ -550,7 +549,8 @@ def main():
                 publishSocket.send_multipart(['work', job])
                 blockStep+=1
                 if (blockStep  % 100000) == 0:
-                    print "Dispatched ", blockStep, "out of", fs.numBlk     
+                    print "Dispatched ", blockStep, "out of", fs.numBlk
+                    time.sleep(3)     
         else:
             publishSocket.send_multipart(["end"])
             break

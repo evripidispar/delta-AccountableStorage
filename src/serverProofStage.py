@@ -49,8 +49,6 @@ def serverProofTask(taskQ, endQ, results, workerName, cells, blockAssignments,
                 x.startTimer(workerName, "ibf_serv")
                 indices = Ibf.getIndices(k, m, hashFunc, job["block"], cellsAssignment=cells)
                 for i in indices:
-                    if i not in results["cells"].keys():
-                        results["cells"][i] = Cell(0, blkSize)
                     results["cells"][i].add(job["block"], challenge, N, g, True)
                 x.endTimer(workerName, "ibf_serv")
                 
@@ -104,7 +102,8 @@ def serverProofWorker(publisherAddress, sinkAddress, cells,
     hashFunc = [Hash1, Hash2, Hash3, Hash4, Hash5, Hash6]
     results = {"worker":workerName, "cells":{}, "timers":{}, "qSets":{}}
     
-    
+    for i in xrange(m):
+        results["cells"][i] = Cell(0,blockSize)
     taskThread = threading.Thread(target=serverProofTask,
                                   args=(taskQ, endQ, results, workerName,
                                         cells, blocks, challenge, lostBlocks, tags, cmbLock, 
@@ -121,6 +120,10 @@ def serverProofWorker(publisherAddress, sinkAddress, cells,
                 time.sleep(1)
                 taskQ.put_nowait("end")
                 res = endQ.get(True)
+                for i in xrange(m):
+                    if res["cells"][i].count == 0:
+                        del res["cells"][i]
+                    
                 endQ.task_done()
                 rpcClt = RpcPdrClient(context)
                 inMsg = rpcClt.rpcAddress(sinkAddress, res)
