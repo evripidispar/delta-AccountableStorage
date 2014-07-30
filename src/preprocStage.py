@@ -19,61 +19,64 @@ from ExpTimer import ExpTimer
 
 
 def preprocTask(taskQ, endQ, results, workerName, k, m, hashFunc, blockSz, 
-                secret, public, hashProdOne, noTags, cells, blockAssignments):
+                secret, public, hashProdOne, noTags, cells, blockAssignments, 
+                threadId, taskLock, sharedTimer, pbSize):
     
-    x = ExpTimer()
-    x.registerSession(workerName)
-    x.registerTimer(workerName, "tag")
-    x.registerTimer(workerName, "ibf")
     
+    tName = workerName+"_"+str(threadId)
+    with taskLock:
+        results["timerNames"].append(tName)
+    sharedTimer.registerSession(tName)
+    sharedTimer.registerTimer(tName, "tag")
+    sharedTimer.registerTimer(tName, "ibf")
     
     while True:
         try:
             job = taskQ.get()
+            taskQ.task_done()
+            
             if job == "end":
-                results["timers"] = x 
-                endQ.put(results)
+                endQ.put(tName)
                 break
             job = cPickle.loads(job)
-            blkIndex = job["index"]
-            
-            indices = Ibf.getIndices(k, m, hashFunc, job["block"], cellsAssignment=cells)
-            x.startTimer(workerName, "ibf")
-            for i in indices:
-                    results["cells"][i].add(job["block"], secret, public["n"],
-                                         public["g"], hashProdOne)
-            x.endTimer(workerName, "ibf")
-            if blkIndex % 25000 == 0 and blkIndex > 0:
-                    print "worker", workerName, blkIndex
-            
-        
-            if blkIndex in blockAssignments:
-                    results["w"][blkIndex] = singleW(job["block"], secret["u"])
-                    
+            for blockPBItem in BE.chunks(job, pbSize):
                 
-                    if noTags == False:
-                        x.startTimer(workerName, "tag")
-                        results["tags"][blkIndex] = singleTag(results["w"][blkIndex],
-                                                          job["block"],
+                blk = BE.BlockDisk2Block(blockPBItem, blockSz)
+                bIndex = blk.getDecimalIndex()
+                indices = Ibf.getIndices(k, m, hashFunc, blk, cellsAssignment=cells)    
+                
+                sharedTimer.startTimer(tName, "ibf")
+                for i in indices:
+                        results["cells"][i].add(blk, secret, public["n"],public["g"], hashProdOne)
+                sharedTimer.endTimer(tName, "ibf")
+
+                if bIndex in blockAssignments:
+                    results["w"][bIndex] = singleW(blk, secret["u"])
+                
+                if noTags == False:
+                    sharedTimer.startTimer(tName, "tag")
+                    results["tags"][bIndex] = singleTag(results["w"][bIndex],
+                                                          blk,
                                                           public["g"],
                                                           secret["d"],
                                                           public["n"])
-                    x.endTimer(workerName, "tag")
-            taskQ.task_done()
+                    sharedTimer.endTimer(tName, "tag")
+            
         except Empty:
             pass
             
 def preprocWorker(publisherAddr, sinkAddr, cells, k, m,
                    blockSz, secret, public, hashProdOne,
-                   blockAssignments, noTags, order):
+                   blockAssignments, noTags, order, pbSize):
     
     
     workerName = mp.current_process().name
     context = zmq.Context()
     taskQ = Queue()
     endQ = Queue()
-    preprocTaskLock = threading.Lock()
-
+    taskLock = threading.Lock()
+    sharedTimer = ExpTimer()
+    threadsNumber = 1 #ALWAYS 1! This is here not to slow down the subscriber
 
     subSocket = context.socket(zmq.SUB)
     subSocket.setsockopt(zmq.SUBSCRIBE, b'work')
@@ -85,18 +88,19 @@ def preprocWorker(publisherAddr, sinkAddr, cells, k, m,
     print "PreprocWorker", workerName , "initiated"
     results = None
     if noTags == False:
-        results = {"worker":workerName, "cells":{}, "w":{}, "tags":{}, "timers":None}
+        results = {"worker":workerName, "cells":{}, "w":{}, "tags":{}, "timers":None, "timerNames":[]}
     else:
-        results = {"worker":workerName, "cells":{}, "w":{}, "timers":None}
+        results = {"worker":workerName, "cells":{}, "w":{}, "timers":None, "timerNames":[]}
         
     
-    
-    taskThread = threading.Thread(target=preprocTask, 
+    for i in xrange(threadsNumber):
+        taskThread = threading.Thread(target=preprocTask, 
                                   args=(taskQ, endQ, results, workerName, k, m, hashFunc, blockSz, 
-                                secret, public, hashProdOne,
-                                 noTags, cells, blockAssignments))
-    taskThread.daemon = True
-    taskThread.start()
+                                secret, public, hashProdOne, noTags, 
+                                cells, blockAssignments, i, taskLock, sharedTimer, pbSize))
+        
+        taskThread.daemon = True
+        taskThread.start()
     
     for i in range(m):
         results["cells"][i] = Cell(0,blockSz)
@@ -105,22 +109,29 @@ def preprocWorker(publisherAddr, sinkAddr, cells, k, m,
         try:
             workItem = subSocket.recv_multipart()
             if workItem[0] == 'end':
-                taskQ.put_nowait("end")
+                for i in xrange(threadsNumber):
+                    taskQ.put_nowait("end")
                 
-                res = endQ.get(True)
+                finishedTaskThreads = set()
+                while len(finishedTaskThreads) != threadsNumber:
+                    tName = endQ.get(True)
+                    endQ.task_done()
+                    finishedTaskThreads.add(tName)
+                
+                
+                results["timers"] = sharedTimer
                 for i in range(m):
-                    if res["cells"][i].count == 0:
+                    if results["cells"][i].count == 0:
                         del results["cells"][i]
                 print "END"
-                endQ.task_done()
+                
                 
                 rpc = RpcPdrClient(context)
-                inMsg = rpc.rpcAddress(sinkAddr, res)
+                inMsg = rpc.rpcAddress(sinkAddr, results)
                 if inMsg == "ACK":
                     break
             else:
                 taskQ.put_nowait(workItem[1])
-                
                 
         except zmq.ZMQError as e:
                 print e

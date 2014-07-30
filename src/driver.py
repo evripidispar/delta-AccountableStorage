@@ -36,7 +36,7 @@ import validateServerProofStage
 from HashFunc import Hash1, Hash2, Hash3, Hash4, Hash5, Hash6
 from Queue import Queue
 from Queue import Empty
-
+from copy import deepcopy
 
 LOST_BLOCKS = 6
 
@@ -565,6 +565,7 @@ def main():
     
     
     if doNotPerformPreproc == False:
+        STIME = time.time()
         workersPool = []
         
         cellAssignments = BE.chunkAlmostEqual(range(ibfLength), args.workers)
@@ -575,10 +576,11 @@ def main():
                            args=(publisherAddress, sinkAddress, cellsPerW, 
                                  args.hashNum, ibfLength, fs.datSize,
                                  secret, public, True, 
-                                 blocksPerW, True, w))
+                                 blocksPerW, True, w, fs.pbSize))
             p.start()
             workersPool.append(p)
         
+          
             
         print "Waiting to establish workers"
         time.sleep(5)
@@ -586,17 +588,14 @@ def main():
         blockStep = 0
         while True:
             dataChunk = fp.read(bytesPerWorker)
+            
             if dataChunk:
-                for blockPBItem in BE.chunks(dataChunk, fs.pbSize):
-                    block = BE.BlockDisk2Block(blockPBItem, fs.datSize)
-                    bIndex = block.getDecimalIndex()
-                    job = {'index':bIndex, 'block':block}
-                    job = cPickle.dumps(job)
-                    publishSocket.send_multipart(['work', job])
-                    blockStep+=1
-                    if (blockStep  % 100000) == 0:
-                        print "Dispatched ", blockStep, "out of", fs.numBlk
-                        time.sleep(3)     
+                dat = cPickle.dumps(dataChunk)
+                publishSocket.send_multipart(['work', dat])
+                blockStep+=1
+                if (blockStep  % 100000) == 0:
+                    print "Dispatched ", blockStep, "out of", fs.numBlk
+                    time.sleep(3)     
             else:
                 publishSocket.send_multipart(["end"])
                 break
@@ -620,8 +619,9 @@ def main():
             localIbf.cells.update(i["cells"])
             if "tags" in i.keys():
                 pdrSes.T.update(i["tags"])
-            pdrSes.TT[i["worker"]+str("_tag")] = i["timers"].getTotalTimer(i["worker"], "tag")
-            pdrSes.TT[i["worker"]+str("_ibf")] = i["timers"].getTotalTimer(i["worker"], "ibf")
+            for tName in i["timerNames"]:
+                pdrSes.TT[tName+str("_tag")] = i["timers"].getTotalTimer(tName, "tag")
+                pdrSes.TT[tName+str("_ibf")] = i["timers"].getTotalTimer(tName, "ibf")
             #print i["worker"], i["blocksExamined"], i["w"].keys(), len(i["w"].keys()), len(pdrSes.W.keys()), len(localIbf.cells.keys()), ibfLength
             #x = i["timers"].getTotalTimer(i["worker"], "ibf")
         pdrSes.addState(localIbf)
@@ -630,8 +630,13 @@ def main():
             worker.join()
             worker.terminate()
      
-    
-    
+        ETIME = time.time()
+        print ETIME - STIME-5 , "sec"
+        wkeys = pdrSes.W.keys()
+        correct = range(fs.numBlk)
+        if len(correct) != len(wkeys):
+            print "Correct len", len(correct), "diff", len(correct)-len(wkeys), list(set(correct)-set(wkeys))
+        sys.exit(0)
     pdrSes.addNetInfo(publisherAddress, sinkAddress, publishSocket, sinkSocket)
     
          
@@ -650,8 +655,8 @@ def main():
                                        fs.numBlk, args.runId)
 
     #ip = "10.109.173.162"
-    #ip = '192.168.1.8'
-    ip = "127.0.0.1"
+    ip = '192.168.1.13'
+    #ip = "127.0.0.1"
    
     clt = RpcPdrClient(zmqContext)    
     print "Sending Initialization message"

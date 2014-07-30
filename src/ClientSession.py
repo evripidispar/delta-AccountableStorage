@@ -6,16 +6,11 @@ from CryptoUtil import pickPseudoRandomTheta
 from Crypto.Util import number
 from Ibf import Ibf
 import itertools
-import numpy as np
 import multiprocessing as mp
-from math import floor, log
 import CloudPdrMessages_pb2
 import struct
-from PdrManager import IbfManager, QSetManager
 from ExpTimer import ExpTimer
 import gmpy2
-import psutil
-import os
 import zmq
 import serverProofStage
 import time
@@ -148,6 +143,7 @@ class ClientSession(object):
                     
                     if blockStep % 100000 == 0:
                         print "Dispatched ", blockStep, "out of", fsMsg.numBlk
+                        time.sleep(2)
             else:
                 publishSocket.send_multipart(['end'])
                 break
@@ -181,8 +177,6 @@ class ClientSession(object):
         pprint.pprint(['Alive', combinedValues["alive"]])
         pprint.pprint(['Alive_count', combinedValues["alive_count"]])
     
-     
-        print "====="
         
         pprint.pprint(["Lost", len(self.lost)])
         pprint.pprint(self.lost)
