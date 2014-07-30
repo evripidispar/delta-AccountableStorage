@@ -177,6 +177,8 @@ class ClientSession(object):
         pprint.pprint(['Alive', combinedValues["alive"]])
         pprint.pprint(['Alive_count', combinedValues["alive_count"]])
     
+     
+        print "====="
         
         pprint.pprint(["Lost", len(self.lost)])
         pprint.pprint(self.lost)

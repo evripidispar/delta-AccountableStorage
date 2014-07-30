@@ -25,7 +25,7 @@ class ExpTimer(object):
     
     
     def printTotalTotal(self, sId, tId):
-        print tId+str("_total"), self.timers[sId][tId+str("_total")]
+        print sId, tId+str("_total"), self.timers[sId][tId+str("_total")]
     
     def printSessionTimers(self, sId):
         for k in self.timers[sId].keys():
@@ -38,3 +38,4 @@ class ExpTimer(object):
         self.timers[sId][newTid] = self.timers[sId][tId]
         self.timers[sId][newTid+str("_total")] = self.timers[sId][tId+str("_total")]
         del self.timers[sId][tId]
+        
