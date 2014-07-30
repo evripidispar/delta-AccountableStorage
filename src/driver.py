@@ -593,7 +593,7 @@ def main():
     
     if args.preprocMode == True:
         savePrprocStageForLater(pdrSes.TT, pdrSes.W, pdrSes.ibf, fs.numBlk, fs.datSize)
-    
+        sys.exit(0)
        
     
     pdrSes.addDelta(delta)
