@@ -42,52 +42,6 @@ LOST_BLOCKS = 6
 
 W = {}
 Tags = {}
-ssss = time.time()
-eeee = None
-
-def clientWorkerProof(inputQueue, blockProtoBufSz, blockDataSz, lost, chlng, W, N, comb, lock, qSets, ibf, manager, TT):
-    
-    pName = mp.current_process().name
-    x = ExpTimer()
-    x.registerSession(pName)
-    x.registerTimer(pName, "cmbW")
-    x.registerTimer(pName, "qSet_check")
-    
-    while True:
-        item = inputQueue.get()
-        if item == "END":
-            TT[pName+str("_cmbW")] = x.getTotalTimer(pName, "cmbW")
-            TT[pName+str("_qSet_check")] = x.getTotalTimer(pName, "qSet_check")
-            return
-        
-        for blockPBItem in BE.chunks(item, blockProtoBufSz):
-            block = BE.BlockDisk2Block(blockPBItem, blockDataSz)
-            bIndex = block.getDecimalIndex()
-            if bIndex in lost:
-                x.startTimer(pName, "qSet_check")
-                binBlockIndex = block.getStringIndex()
-                indices = ibf.getIndices(binBlockIndex, True)
-                for i in indices:
-                    with lock:
-                        qSets.addValue(i, bIndex)
-                        
-                x.endTimer(pName, "qSet_check")
-                del block
-                continue
-            
-            x.startTimer(pName, "cmbW")
-            aI = pickPseudoRandomTheta(chlng, block.getStringIndex())
-            aI = number.bytes_to_long(aI)
-            h = SHA256.new()
-            wI = W[bIndex]
-            h.update(wI)
-            wI = number.bytes_to_long(h.digest())
-            wI = gmpy2.powmod(wI, aI, N)
-            with lock:
-                comb["w"] *= wI
-                comb["w"] = gmpy2.powmod(comb["w"], 1, N)
-            x.endTimer(pName, "cmbW")
-            del block
 
     
 def processServerProof(cpdrProofMsg, session):
@@ -144,12 +98,13 @@ def processServerProof(cpdrProofMsg, session):
                        args=(session.pubAddr, session.sinkAddr,
                              session.fsInfo["k"], session.fsInfo["ibfLength"],
                              cellsPerW, blocksPerW, servLost, cmbWLock, cmbW,
-                             session.challenge, session.W, session.sesKey.key.n ))
+                             session.challenge, session.W, session.sesKey.key.n,
+                             session.fsInfo["pbSize"], session.fsInfo["blkSz"]))
     
         p.start()
         workerPool.append(p)
     
-    print "Waiting to establish workers"
+    print "Waiting to initiate workers"
     time.sleep(5)
     fp = open(session.fsInfo["fsName"], "rb")
     fp.read(4)
@@ -159,15 +114,16 @@ def processServerProof(cpdrProofMsg, session):
     while True:
         dataChunk = fp.read(session.fsInfo["bytesPerWorker"])
         if dataChunk:
-            for blockPBItem in BE.chunks(dataChunk, session.fsInfo["pbSize"]):
-                    block = BE.BlockDisk2Block(blockPBItem, session.fsInfo["blkSz"])
-                    bIndex = block.getDecimalIndex()
-                    job = {'index':bIndex, 'block': block}
-                    job = cPickle.dumps(job)
-                    session.pubSocket.send_multipart(["work", job])
-                    blockStep +=1
-                    if blockStep % 100000 == 0:
-                        print "Dispatched ", blockStep, "out of", session.fsInfo["blockNum"]
+            #for blockPBItem in BE.chunks(dataChunk, session.fsInfo["pbSize"]):
+            #        block = BE.BlockDisk2Block(blockPBItem, session.fsInfo["blkSz"])
+            #        bIndex = block.getDecimalIndex()
+            #        job = {'index':bIndex, 'block': block}
+            #        job = cPickle.dumps(job)
+            dat = cPickle.dumps(dataChunk)
+            session.pubSocket.send_multipart(["work", dat])
+            blockStep +=1
+            if blockStep % 100000 == 0:
+                print "Dispatched ", blockStep, "out of", session.fsInfo["blockNum"]
         else:
             session.pubSocket.send_multipart(["end"])
             break
@@ -216,9 +172,6 @@ def processServerProof(cpdrProofMsg, session):
         
         print "ratioCheck1", RatioCheck1
         print "gS", gS
-        eeee = time.time()
-        print eeee-ssss
-        
         sys.exit(0)
         return False
 
@@ -251,10 +204,6 @@ def processServerProof(cpdrProofMsg, session):
     et.endTimer(pName, "lostSum")
     
     
-    #serverStateIbf = session.ibf.generateIbfFromProtobuf(cpdrProofMsg.proof.serverState,
-    #                                         session.fsInfo["blkSz"])
-    
-    #print session.ibf.m()
     
     serverStateIbf = session.ibf.generateIbfFromProtobuf(cpdrProofMsg.proof.serverState,
                                                  session.fsInfo["blkSz"])
@@ -588,7 +537,6 @@ def main():
         blockStep = 0
         while True:
             dataChunk = fp.read(bytesPerWorker)
-            
             if dataChunk:
                 dat = cPickle.dumps(dataChunk)
                 publishSocket.send_multipart(['work', dat])
@@ -636,7 +584,7 @@ def main():
         correct = range(fs.numBlk)
         if len(correct) != len(wkeys):
             print "Correct len", len(correct), "diff", len(correct)-len(wkeys), list(set(correct)-set(wkeys))
-        sys.exit(0)
+            sys.exit(0)
     pdrSes.addNetInfo(publisherAddress, sinkAddress, publishSocket, sinkSocket)
     
          

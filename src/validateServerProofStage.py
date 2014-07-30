@@ -4,6 +4,7 @@ import gmpy2
 import cPickle
 import multiprocessing as mp
 import threading
+import BlockEngine as BE
 
 from ExpTimer import ExpTimer
 from Ibf import Ibf
@@ -15,7 +16,7 @@ from CryptoUtil import pickPseudoRandomTheta
 
 def validationTask(taskQ, endQ, results, workerName, k, m, hashFunc,
                    cells, blockAssignments, lostBlocks, cmbLock, cmbValue,
-                   challenge, W, N):
+                   challenge, W, N, pbSize, blockSize):
     
     x = ExpTimer()
     
@@ -31,48 +32,50 @@ def validationTask(taskQ, endQ, results, workerName, k, m, hashFunc,
                 results["timers"] = x
                 endQ.put(results)
                 break
-            
             job = cPickle.loads(job)
-            bIndex = job["index"]
-            if startIndex == False:
-                print "Worker-Task starts with block index", bIndex
-                startIndex = True
+            for blockPBItem in BE.chunks(job, pbSize):
+                blk = BE.BlockDisk2Block(blockPBItem,blockSize)
+                bIndex = blk.getDecimalIndex()
+           
+                if startIndex == False:
+                    print "Worker-Task starts with block index", bIndex
+                    startIndex = True
                 
-            if bIndex not in lostBlocks:
-                if bIndex % 25000 == 0 and bIndex > 0:
-                    print "Worker", workerName, bIndex
-                if bIndex in blockAssignments:
-                    x.startTimer(workerName, "cmbW")
-                    aI = pickPseudoRandomTheta(challenge, job['block'].getStringIndex())
-                    aI = number.bytes_to_long(aI)
-                    h = SHA256.new()
-                    wI = W[bIndex]
-                    h.update(wI)
-                    wI = number.bytes_to_long(h.digest())
-                    wI = gmpy2.powmod(wI, aI, N)
-                    
-                    with cmbLock:
-                        cmbValue["w"] *= wI
-                        cmbValue["w"] = gmpy2.powmod(cmbValue["w"], 1, N)
-                    x.endTimer(workerName, "cmbW")
-            else:
-                if bIndex in blockAssignments:
-                    x.startTimer(workerName, "qSet_check")
-                    lostIndices = Ibf.getIndices(k, m, hashFunc, 
-                                                 job['block'].getStringIndex(), isIndex=True)
-                    
-                    for lIndex in lostIndices:
-                        if lIndex not in results["qSets"].keys():
-                            results["qSets"][lIndex] = []
-                        results["qSets"][lIndex].append(bIndex)
-                    x.endTimer(workerName, "qSet_check")
+                if bIndex not in lostBlocks:
+                    if bIndex % 25000 == 0 and bIndex > 0:
+                        print "Worker", workerName, bIndex
+                    if bIndex in blockAssignments:
+                        x.startTimer(workerName, "cmbW")
+                        aI = pickPseudoRandomTheta(challenge, blk.getStringIndex())
+                        aI = number.bytes_to_long(aI)
+                        h = SHA256.new()
+                        wI = W[bIndex]
+                        h.update(wI)
+                        wI = number.bytes_to_long(h.digest())
+                        wI = gmpy2.powmod(wI, aI, N)
+                        
+                        with cmbLock:
+                            cmbValue["w"] *= wI
+                            cmbValue["w"] = gmpy2.powmod(cmbValue["w"], 1, N)
+                        x.endTimer(workerName, "cmbW")
+                else:
+                    if bIndex in blockAssignments:
+                        x.startTimer(workerName, "qSet_check")
+                        lostIndices = Ibf.getIndices(k, m, hashFunc, 
+                                                     blk.getStringIndex(), isIndex=True)
+                        
+                        for lIndex in lostIndices:
+                            if lIndex not in results["qSets"].keys():
+                                results["qSets"][lIndex] = []
+                            results["qSets"][lIndex].append(bIndex)
+                        x.endTimer(workerName, "qSet_check")
                     
                        
         except Empty:
             pass
 
 def worker(publisherAddr, sinkAddress, k, m, cells, blockAssignments,
-           lostBlocks, cmbLock, cmbValue, challenge, W, N):
+           lostBlocks, cmbLock, cmbValue, challenge, W, N, pbSize, blockSize):
     
     workerName = mp.current_process().name
     
@@ -94,7 +97,7 @@ def worker(publisherAddr, sinkAddress, k, m, cells, blockAssignments,
                                   args=(taskQ, endQ, results, workerName,
                                         k, m, hashFunc, cells, blockAssignments,
                                         lostBlocks, cmbLock, cmbValue, challenge,
-                                        W, N))
+                                        W, N, pbSize, blockSize))
     
     taskThread.daemon = True
     taskThread.start()
