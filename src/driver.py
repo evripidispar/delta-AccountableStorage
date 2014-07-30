@@ -483,8 +483,8 @@ def main():
     print args.dt  
     if args.dt == 1:
         delta = int(floor(sqrt(fs.numBlk)))
-        args.lostNum = random.choice(range(delta))
-    
+        
+    args.lostNum = delta-1
     ibfLength = ((args.hashNum+1)*delta)
     ibfLength = int(ibfLength)
     pdrSes.addibfLength (ibfLength)
