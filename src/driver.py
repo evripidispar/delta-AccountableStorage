@@ -36,6 +36,7 @@ import validateServerProofStage
 from HashFunc import Hash1, Hash2, Hash3, Hash4, Hash5, Hash6
 from Queue import Queue
 from Queue import Empty
+import time
 from copy import deepcopy
 
 LOST_BLOCKS = 6
@@ -388,7 +389,7 @@ def main():
    
     p.add_argument('-r', dest="runId", action='store', help='Current running id')
     
-    p.add_argument('--tagmode', dest="tagmode", action='store', help='Tag Mode', type=bool, default=False)
+    p.add_argument('--tagmode', dest="tagmode", action='store_true', help='Tag Mode',  default=False)
     p.add_argument('--tagload', dest="tagload", action='store', default=None, 
                    help='load tags/keys from location')
     
@@ -589,6 +590,7 @@ def main():
     
          
     if args.tagmode == True:
+        print "saveTagsForLater"
         saveTagsForLater(pdrSes.TT, pdrSes.T, pdrSes.sesKey.key, fs.numBlk, fs.datSize)
     
     if args.preprocMode == True:
