@@ -2,7 +2,6 @@ import pickle
 import marshal
 
 from Cell import Cell
-from SharedCounter import SharedCounter
 
 f=open("test.cell","wb")
 c=Cell(10,10)
