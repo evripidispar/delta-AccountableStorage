@@ -124,6 +124,7 @@ def preprocWorker(publisherAddr, sinkAddr, cells, k, m,
                 results["timers"] = sharedTimer
                 for i in range(m):
                     if results["cells"][i].count == 0:
+                        
                         del results["cells"][i]
                 print "END"
                 

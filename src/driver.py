@@ -216,6 +216,12 @@ def processServerProof(cpdrProofMsg, session):
     et.endTimer(pName,"subIbf")
     
     for k in lostSum.keys():  
+        print k
+        
+        assert k in serverStateIbf.cells.keys()
+        assert k in session.ibf.cells.keys()
+        assert k in diffIbf.cells.keys()
+        
         diffIbf.cells[k].hashProd = copy.deepcopy(lostSum[k])
         assert diffIbf.cells[k].hashProd == lostSum[k]
     
@@ -596,6 +602,7 @@ def main():
         if len(correct) != len(wkeys):
             print "Correct len", len(correct), "diff", len(correct)-len(wkeys), list(set(correct)-set(wkeys))
             sys.exit(0)
+            
     pdrSes.addNetInfo(publisherAddress, sinkAddress, publishSocket, sinkSocket)
     
          
@@ -615,8 +622,8 @@ def main():
                                        fs.numBlk, args.runId)
 
     #ip = "10.109.173.162"
-    ip = '192.168.1.13'
-    #ip = "127.0.0.1"
+    #ip = '192.168.1.13'
+    ip = "127.0.0.1"
    
     clt = RpcPdrClient(zmqContext)    
     print "Sending Initialization message"

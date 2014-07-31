@@ -51,13 +51,13 @@ def serverProofTask(taskQ, endQ, results, workerName, cells, blockAssignments,
                     print "Worker", workerName, bIndex
                 x.startTimer(workerName, "ibf_serv")
                 indices = Ibf.getIndices(k, m, hashFunc, job["block"], cellsAssignment=cells)
+                
                 for i in indices:
-                    results["cells"][i].add(job["block"], challenge, N, g, True)
+                        results["cells"][i].add(job["block"], challenge, N, g, True)
                 x.endTimer(workerName, "ibf_serv")
                 
-                if randomBlocksToTest != None and bIndex not in randomBlocksToTest:
-                        print "HERE"
-                        continue
+                #if randomBlocksToTest != None and bIndex not in randomBlocksToTest:
+                #        continue
                 
                 if bIndex in blockAssignments:
                     x.startTimer(workerName, "cSumKept")    
