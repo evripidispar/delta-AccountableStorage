@@ -67,7 +67,8 @@ def main():
                 continue
             runName = "runs/"+str(blocks)+"__"+"__"+str(size)+".txt"
             tagName = "tags/tags_"+str(blocks)+"_"+str(size)+".dat"
-            cmd = "python driver.py -b %s -g generator.txt -k %d -n 1024 -w %d --task %d -r %s -l %d --tagload %s;" % (fName, k, w, tasksNum, runName, loss, tagName)
+            preprocName = "preproc/preproc_"+str(blocks)+"_"+str(size)+".data"
+            cmd = "python driver.py -b %s -g generator.txt -k %d -n 1024 -w %d --task %d -r %s -l %d --tagload %s --preprocload %s;" % (fName, k, w, tasksNum, runName, loss, tagName, preprocName)
             if int(blocks) not in runs.keys():
                 runs[int(blocks)] = []
             runs[int(blocks)].append(cmd)

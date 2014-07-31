@@ -64,7 +64,10 @@ class ClientSession(object):
         
     def addClientChallenge(self, challenge, testIndicies=None):
         self.challenge = str(challenge)
-        self.randomBlocksToTest = set(testIndicies)
+        if testIndicies != None:
+            self.randomBlocksToTest = set(testIndicies)
+        else:
+            self.randomBlocksToTest  = None
         #if len(self.randomBlocksToTest) > 0:
         #    self.lost=self.lost.intersection(self.randomBlocksToTest)
      
