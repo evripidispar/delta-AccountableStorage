@@ -27,7 +27,7 @@ def processChallenge(cpdrMsg):
      
     if cpdrMsg.cltId in clients.keys():
         chlng = cpdrMsg.chlng.challenge
-        if len(cpdrMsg.cpdrMsg.testIndices):
+        if len(cpdrMsg.chlng.testIndices):
             clients[cpdrMsg.cltId].addClientChallenge(chlng, cpdrMsg.chlng.testIndices)
         else:
             clients[cpdrMsg.cltId].addClientChallenge(chlng)
