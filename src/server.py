@@ -27,8 +27,10 @@ def processChallenge(cpdrMsg):
      
     if cpdrMsg.cltId in clients.keys():
         chlng = cpdrMsg.chlng.challenge
-        print cpdrMsg.chlng.testIndices
-        clients[cpdrMsg.cltId].addClientChallenge(chlng, cpdrMsg.chlng.testIndices)
+        if len(cpdrMsg.cpdrMsg.testIndices):
+            clients[cpdrMsg.cltId].addClientChallenge(chlng, cpdrMsg.chlng.testIndices)
+        else:
+            clients[cpdrMsg.cltId].addClientChallenge(chlng)
         proofMsg  = clients[cpdrMsg.cltId].produceProof(cpdrMsg.cltId)
         return proofMsg
 
