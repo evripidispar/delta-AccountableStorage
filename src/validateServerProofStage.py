@@ -16,7 +16,7 @@ from CryptoUtil import pickPseudoRandomTheta
 
 def validationTask(taskQ, endQ, results, workerName, k, m, hashFunc,
                    cells, blockAssignments, lostBlocks, cmbLock, cmbValue,
-                   challenge, W, N, pbSize, blockSize):
+                   challenge, W, N, pbSize, blockSize, randomBlocksToTest=None):
     
     x = ExpTimer()
     
@@ -42,6 +42,10 @@ def validationTask(taskQ, endQ, results, workerName, k, m, hashFunc,
                     startIndex = True
                 
                 if bIndex not in lostBlocks:
+                    if randomBlocksToTest != None and bIndex not in randomBlocksToTest:
+                        continue
+                    with cmbLock:
+                        cmbValue["alive"] += 1
                     if bIndex % 25000 == 0 and bIndex > 0:
                         print "Worker", workerName, bIndex
                     if bIndex in blockAssignments:
@@ -49,6 +53,7 @@ def validationTask(taskQ, endQ, results, workerName, k, m, hashFunc,
                         aI = pickPseudoRandomTheta(challenge, blk.getStringIndex())
                         aI = number.bytes_to_long(aI)
                         h = SHA256.new()
+                        
                         wI = W[bIndex]
                         h.update(wI)
                         wI = number.bytes_to_long(h.digest())
@@ -75,7 +80,8 @@ def validationTask(taskQ, endQ, results, workerName, k, m, hashFunc,
             pass
 
 def worker(publisherAddr, sinkAddress, k, m, cells, blockAssignments,
-           lostBlocks, cmbLock, cmbValue, challenge, W, N, pbSize, blockSize):
+           lostBlocks, cmbLock, cmbValue, challenge, W, N, pbSize, blockSize,
+            randomBlocksToTest=None):
     
     workerName = mp.current_process().name
     
@@ -97,7 +103,7 @@ def worker(publisherAddr, sinkAddress, k, m, cells, blockAssignments,
                                   args=(taskQ, endQ, results, workerName,
                                         k, m, hashFunc, cells, blockAssignments,
                                         lostBlocks, cmbLock, cmbValue, challenge,
-                                        W, N, pbSize, blockSize))
+                                        W, N, pbSize, blockSize, randomBlocksToTest))
     
     taskThread.daemon = True
     taskThread.start()

@@ -4,8 +4,6 @@ import zmq
 import CloudPdrMessages_pb2
 from ClientSession import ClientSession
 
-
-
 clients = {}
 
 def processInitMessage(cpdrMsg, context, workersNum, storeBlocks=None):
@@ -29,7 +27,7 @@ def processChallenge(cpdrMsg):
      
     if cpdrMsg.cltId in clients.keys():
         chlng = cpdrMsg.chlng.challenge
-        clients[cpdrMsg.cltId].addClientChallenge(chlng)
+        clients[cpdrMsg.cltId].addClientChallenge(chlng, cpdrMsg.chlng.testIndices)
         proofMsg  = clients[cpdrMsg.cltId].produceProof(cpdrMsg.cltId)
         return proofMsg
 

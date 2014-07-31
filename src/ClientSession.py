@@ -62,11 +62,14 @@ class ClientSession(object):
     def storeBlocksS3(self, blockCollection):
         print "S3"
         
-    def addClientChallenge(self, challenge):
+    def addClientChallenge(self, challenge, testIndicies=None):
         self.challenge = str(challenge)
+        self.randomBlocksToTest = set(testIndicies)
+        #if len(self.randomBlocksToTest) > 0:
+        #    self.lost=self.lost.intersection(self.randomBlocksToTest)
      
     def chooseBlocksToLose(self, lossNum):
-        self.lost = random.sample(xrange(self.fsBlocksNum), lossNum)
+        self.lost = set(random.sample(xrange(self.fsBlocksNum), lossNum))
      
     def produceProof(self, cltId):
         
@@ -123,7 +126,7 @@ class ClientSession(object):
                                   self.lost, self.T, combinedLock, 
                                   combinedValues, self.clientKeyN,
                                   self.clientKeyG, self.k, ibfLength,
-                                  fsMsg.datSize))
+                                  fsMsg.datSize, self.randomBlocksToTest))
             p.start()
             workersPool.append(p)
         

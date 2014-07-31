@@ -19,7 +19,7 @@ from CryptoUtil import pickPseudoRandomTheta
 
 def serverProofTask(taskQ, endQ, results, workerName, cells, blockAssignments,
                     challenge, lostBlocks, tags, cmbLock, cmbVal, N, g, k, 
-                    m, hashFunc, blkSize):
+                    m, hashFunc, blkSize, randomBlocksToTest=None):
     
     x = ExpTimer()
     x.registerSession(workerName)
@@ -43,7 +43,11 @@ def serverProofTask(taskQ, endQ, results, workerName, cells, blockAssignments,
                 print "Worker-Task starts with block index", bIndex
                 startIndex = True
             
-            if bIndex not in lostBlocks:
+            
+            
+            if bIndex not in lostBlocks:   
+                with cmbLock:
+                    cmbVal["alive"] +=1 
                 if bIndex % 25000 == 0 and bIndex > 0:
                     print "Worker", workerName, bIndex
                 x.startTimer(workerName, "ibf_serv")
@@ -51,6 +55,9 @@ def serverProofTask(taskQ, endQ, results, workerName, cells, blockAssignments,
                 for i in indices:
                     results["cells"][i].add(job["block"], challenge, N, g, True)
                 x.endTimer(workerName, "ibf_serv")
+                
+                if randomBlocksToTest != None and bIndex not in randomBlocksToTest:
+                        continue
                 
                 if bIndex in blockAssignments:
                     x.startTimer(workerName, "cSumKept")    
@@ -85,7 +92,7 @@ def serverProofTask(taskQ, endQ, results, workerName, cells, blockAssignments,
 
 def serverProofWorker(publisherAddress, sinkAddress, cells,
                 blocks, challenge, lostBlocks, tags, cmbLock, 
-                cmbVal, N, g, k, m, blockSize):
+                cmbVal, N, g, k, m, blockSize, randomBlocksToTest=None):
     
     taskQ = Queue()
     endQ = Queue()
@@ -107,7 +114,7 @@ def serverProofWorker(publisherAddress, sinkAddress, cells,
     taskThread = threading.Thread(target=serverProofTask,
                                   args=(taskQ, endQ, results, workerName,
                                         cells, blocks, challenge, lostBlocks, tags, cmbLock, 
-                                        cmbVal, N, g, k, m, hashFunc, blockSize))
+                                        cmbVal, N, g, k, m, hashFunc, blockSize, randomBlocksToTest))
     taskThread.daemon = True
     taskThread.start()
     

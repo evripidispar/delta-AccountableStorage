@@ -45,6 +45,7 @@ def preprocTask(taskQ, endQ, results, workerName, k, m, hashFunc, blockSz,
                 bIndex = blk.getDecimalIndex()
                 indices = Ibf.getIndices(k, m, hashFunc, blk, cellsAssignment=cells)    
                 
+              
                 sharedTimer.startTimer(tName, "ibf")
                 for i in indices:
                         results["cells"][i].add(blk, secret, public["n"],public["g"], hashProdOne)
@@ -97,7 +98,8 @@ def preprocWorker(publisherAddr, sinkAddr, cells, k, m,
         taskThread = threading.Thread(target=preprocTask, 
                                   args=(taskQ, endQ, results, workerName, k, m, hashFunc, blockSz, 
                                 secret, public, hashProdOne, noTags, 
-                                cells, blockAssignments, i, taskLock, sharedTimer, pbSize))
+                                cells, blockAssignments, i, taskLock,
+                                 sharedTimer, pbSize))
         
         taskThread.daemon = True
         taskThread.start()

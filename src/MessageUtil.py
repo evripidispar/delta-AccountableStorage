@@ -62,9 +62,12 @@ def constructInitAckMessage():
     cpdrMsg = cpdrMsg.SerializeToString()
     return cpdrMsg
 
-def constructChallengeMessage(challenge, cltId):
+def constructChallengeMessage(challenge, cltId, randomBlocksToChallenge=[]):
     chlng = CloudPdrMessages_pb2.Challenge()
     chlng.challenge = str(challenge)
+    for testBlockIndex in randomBlocksToChallenge:
+        chlng.testIndices.append(testBlockIndex)
+        
     cpdrMsg = constructCloudPdrMessage(CloudPdrMessages_pb2.CloudPdrMsg.CHALLENGE,
                                        None, None, chlng, None, cltId)
     cpdrMsg = cpdrMsg.SerializeToString()

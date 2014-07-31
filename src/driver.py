@@ -21,6 +21,8 @@ from math import floor
 from math import log, sqrt
 from CryptoUtil import pickPseudoRandomTheta
 from Crypto.Util import number
+from Crypto.Random import random
+
 from ExpTimer import ExpTimer
 import multiprocessing as mp
 from TagGenerator import singleTag
@@ -100,7 +102,7 @@ def processServerProof(cpdrProofMsg, session):
                              session.fsInfo["k"], session.fsInfo["ibfLength"],
                              cellsPerW, blocksPerW, servLost, cmbWLock, cmbW,
                              session.challenge, session.W, session.sesKey.key.n,
-                             session.fsInfo["pbSize"], session.fsInfo["blkSz"]))
+                             session.fsInfo["pbSize"], session.fsInfo["blkSz"], session.randomBlocks))
     
         p.start()
         workerPool.append(p)
@@ -115,11 +117,6 @@ def processServerProof(cpdrProofMsg, session):
     while True:
         dataChunk = fp.read(session.fsInfo["bytesPerWorker"])
         if dataChunk:
-            #for blockPBItem in BE.chunks(dataChunk, session.fsInfo["pbSize"]):
-            #        block = BE.BlockDisk2Block(blockPBItem, session.fsInfo["blkSz"])
-            #        bIndex = block.getDecimalIndex()
-            #        job = {'index':bIndex, 'block': block}
-            #        job = cPickle.dumps(job)
             dat = cPickle.dumps(dataChunk)
             session.pubSocket.send_multipart(["work", dat])
             blockStep +=1
@@ -208,6 +205,9 @@ def processServerProof(cpdrProofMsg, session):
     
     serverStateIbf = session.ibf.generateIbfFromProtobuf(cpdrProofMsg.proof.serverState,
                                                  session.fsInfo["blkSz"])
+    #for i in range(serverStateIbf.m):
+    #    if serverStateIbf.cells[i].count == 0:
+    #        del serverStateIbf.cells[i]
         
     et.registerTimer(pName, "subIbf")
     et.startTimer(pName,"subIbf")
@@ -243,6 +243,8 @@ def produceClientId():
     return h.hexdigest()
 
 
+
+
 def subsetAndLessThanDelta(clientMaxBlockId, serverLost, delta):
     
     lossLen = len(serverLost)
@@ -271,8 +273,10 @@ def processClientMessages(incoming, session, lostNum=None):
         print "Processing LOSS_ACK"
         
         session.challenge = session.sesKey.generateChallenge()
-        challengeMsg = MU.constructChallengeMessage(session.challenge, session.cltId)
-        return challengeMsg    
+        if session.isRandomChallenge == True:
+            return MU.constructChallengeMessage(session.challenge, session.cltId, session.randomBlocks)
+        else:
+            return MU.constructChallengeMessage(session.challenge, session.cltId)
     
     elif cpdrMsg.type == CloudPdrMessages_pb2.CloudPdrMsg.PROOF:
         print "Received Proof"
@@ -347,7 +351,12 @@ def savePrprocStageForLater(IbfTimes, W, ibf, blockNum, blockSize):
     fp.close()
     
    
-
+def chooseRandomBlocksForRandomChallenge(totalBlocks, precentage):
+    if totalBlocks <= 10000:
+        return xrange(totalBlocks)
+    else:
+        k = random.sample(xrange(totalBlocks), int(totalBlocks*precentage))
+        return set(k)
     
 
 def getsizeofDictionary(dictionary):
@@ -400,7 +409,8 @@ def main():
     p.add_argument('--preprocload', dest="preprocLoad", action="store", default=None,
                    help='load ibf from ibf/w')
     
-   
+    p.add_argument("--randomMode", dest="randomMode", action="store_true", default=False,
+                  help="Enable random blocks selection for the challenge")
    
    
     args = p.parse_args()
@@ -605,8 +615,8 @@ def main():
                                        fs.numBlk, args.runId)
 
     #ip = "10.109.173.162"
-    ip = '192.168.1.13'
-    #ip = "127.0.0.1"
+    #ip = '192.168.1.13'
+    ip = "127.0.0.1"
    
     clt = RpcPdrClient(zmqContext)    
     print "Sending Initialization message"
@@ -619,8 +629,15 @@ def main():
     print "Received Lost-Ack message"
     
     
+    challengeMsg = None
+    if args.randomMode == True:
     
-    challengeMsg = processClientMessages(lostAck, pdrSes)
+        randomBlocks = chooseRandomBlocksForRandomChallenge(fs.numBlk, 0.15)
+    
+        pdrSes.makeItRandomChallengeSession(randomBlocks)
+        challengeMsg = processClientMessages(lostAck, pdrSes)
+    else:
+        challengeMsg = processClientMessages(lostAck, pdrSes)
     print "Sending Challenge message"
     proofMsg = clt.rpc(ip, 9090, challengeMsg)
     print "Received Proof message"

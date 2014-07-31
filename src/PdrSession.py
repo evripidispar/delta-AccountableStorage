@@ -17,6 +17,8 @@ class PdrSession(object):
         self.cltId = cltId
         self.T = T
         self.TT = {}
+        self.isRandomChallenge = False
+        self.randomBlocks = None
         
         
     def addSecret(self, secret):
@@ -46,6 +48,10 @@ class PdrSession(object):
         self.pubSocket = pubSocket
         self.sinkSocket = sinkSocket
     
+    
+    def makeItRandomChallengeSession(self, randomBlocks):
+        self.randomBlocks = randomBlocks
+        self.isRandomChallenge = True
     
     def addFsInfo(self, blockNum, pbSize, blkSz, skip, bPerWorker,
                   workers, filesystem, ibfLength, hashNum):
