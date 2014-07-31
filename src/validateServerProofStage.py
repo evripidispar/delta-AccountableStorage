@@ -44,8 +44,7 @@ def validationTask(taskQ, endQ, results, workerName, k, m, hashFunc,
                 if bIndex not in lostBlocks:
                     if randomBlocksToTest != None and bIndex not in randomBlocksToTest:
                         continue
-                    with cmbLock:
-                        cmbValue["alive"] += 1
+                   
                     if bIndex % 25000 == 0 and bIndex > 0:
                         print "Worker", workerName, bIndex
                     if bIndex in blockAssignments:

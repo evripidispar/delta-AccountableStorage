@@ -490,7 +490,7 @@ def main():
     log2Blocks = log(fs.numBlk, 2)
     log2Blocks = floor(log2Blocks)
     delta = int(log2Blocks)
-    print args.dt  
+    
     if args.dt == 1:
         delta = int(floor(sqrt(fs.numBlk)))
         
@@ -615,8 +615,8 @@ def main():
                                        fs.numBlk, args.runId)
 
     #ip = "10.109.173.162"
-    #ip = '192.168.1.13'
-    ip = "127.0.0.1"
+    ip = '192.168.1.13'
+    #ip = "127.0.0.1"
    
     clt = RpcPdrClient(zmqContext)    
     print "Sending Initialization message"

@@ -46,8 +46,7 @@ def serverProofTask(taskQ, endQ, results, workerName, cells, blockAssignments,
             
             
             if bIndex not in lostBlocks:   
-                with cmbLock:
-                    cmbVal["alive"] +=1 
+              
                 if bIndex % 25000 == 0 and bIndex > 0:
                     print "Worker", workerName, bIndex
                 x.startTimer(workerName, "ibf_serv")
@@ -57,6 +56,7 @@ def serverProofTask(taskQ, endQ, results, workerName, cells, blockAssignments,
                 x.endTimer(workerName, "ibf_serv")
                 
                 if randomBlocksToTest != None and bIndex not in randomBlocksToTest:
+                        print "HERE"
                         continue
                 
                 if bIndex in blockAssignments:
