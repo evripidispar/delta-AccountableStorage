@@ -54,9 +54,9 @@ def preprocTask(taskQ, endQ, results, workerName, k, m, hashFunc, blockSz,
                 if bIndex in blockAssignments:
                     results["w"][bIndex] = singleW(blk, secret["u"])
                 
-                if noTags == False:
-                    sharedTimer.startTimer(tName, "tag")
-                    results["tags"][bIndex] = singleTag(results["w"][bIndex],
+                    if noTags == False:
+                        sharedTimer.startTimer(tName, "tag")
+                        results["tags"][bIndex] = singleTag(results["w"][bIndex],
                                                           blk,
                                                           public["g"],
                                                           secret["d"],
