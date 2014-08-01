@@ -173,7 +173,7 @@ def chunks(s, n):
     for start in xrange(0, len(s), n):
         yield s[start:start+n]
         
-def chunkAlmostEqual(seq, num):
+def chunkAlmostEqual(items, maxbaskets=3, item_count=None):
     item_count = item_count or len(items)
     baskets = min(item_count, maxbaskets)
     items = iter(items)
