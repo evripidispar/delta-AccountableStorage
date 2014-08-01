@@ -108,7 +108,7 @@ def serverProofWorker(publisherAddress, sinkAddress, cells,
     workerName = mp.current_process().name
     hashFunc = [Hash1, Hash2, Hash3, Hash4, Hash5, Hash6]
     results = {"worker":workerName, "cells":{}, "timers":{}, "qSets":{}}
-    
+    cells=set(cells)
     for i in xrange(m):
         results["cells"][i] = Cell(0,blockSize)
     taskThread = threading.Thread(target=serverProofTask,

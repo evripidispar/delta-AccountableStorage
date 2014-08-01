@@ -93,7 +93,7 @@ def worker(publisherAddr, sinkAddress, k, m, cells, blockAssignments,
     subSocket.connect(publisherAddr)
     blockAssignments = set(blockAssignments)
     hashFunc = [Hash1, Hash2, Hash3, Hash4, Hash5, Hash6]
-    
+    cells = set(cells)
     print "Validation worker", workerName , "initiated"
     print "blockAssignments", len(blockAssignments)
     

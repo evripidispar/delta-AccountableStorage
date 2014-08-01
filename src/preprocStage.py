@@ -84,7 +84,7 @@ def preprocWorker(publisherAddr, sinkAddr, cells, k, m,
     subSocket.setsockopt(zmq.SUBSCRIBE, b'end')
     subSocket.connect(publisherAddr)
     hashFunc = [Hash1, Hash2, Hash3, Hash4, Hash5, Hash6]
-
+    cells = set(cells)
     
     print "PreprocWorker", workerName , "initiated"
     results = None
