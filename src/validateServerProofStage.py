@@ -42,8 +42,8 @@ def validationTask(taskQ, endQ, results, workerName, k, m, hashFunc,
                     startIndex = True
                 
                 if bIndex not in lostBlocks:
-                    #if randomBlocksToTest != None and bIndex not in randomBlocksToTest:
-                    #    continue
+                    if randomBlocksToTest != None and bIndex not in randomBlocksToTest:
+                        continue
                    
                     if bIndex % 25000 == 0 and bIndex > 0:
                         print "Worker", workerName, bIndex

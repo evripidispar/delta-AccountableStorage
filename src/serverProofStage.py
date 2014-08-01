@@ -56,8 +56,8 @@ def serverProofTask(taskQ, endQ, results, workerName, cells, blockAssignments,
                         results["cells"][i].add(job["block"], challenge, N, g, True)
                 x.endTimer(workerName, "ibf_serv")
                 
-                #if randomBlocksToTest != None and bIndex not in randomBlocksToTest:
-                #        continue
+                if randomBlocksToTest != None and bIndex not in randomBlocksToTest:
+                        continue
                 
                 if bIndex in blockAssignments:
                     x.startTimer(workerName, "cSumKept")    
