@@ -510,7 +510,7 @@ def main():
     #fs, fsFp = BlockEngine.getFsDetailsStream(args.blkFp)
     totalBlockBytes = fs.pbSize*fs.numBlk
     bytesPerWorker = (args.task*totalBlockBytes)/ fs.numBlk
-    
+    args.workers = mp.cpu_count()-1
     pdrSes.addFsInfo(fs.numBlk, fs.pbSize, fs.datSize, int(fsSize), 
                      bytesPerWorker, args.workers, args.blkFp, ibfLength, args.hashNum)
     
@@ -621,8 +621,8 @@ def main():
                                       cltId, args.hashNum, delta,
                                        fs.numBlk, args.runId)
 
-    #ip = "10.109.173.162"
-    ip = '192.168.1.13'
+    ip = "10.109.171.65"
+#ip = '192.168.1.13'
     #ip = "127.0.0.1"
    
     clt = RpcPdrClient(zmqContext)    

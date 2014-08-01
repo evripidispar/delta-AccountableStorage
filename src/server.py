@@ -3,7 +3,7 @@ import MessageUtil as MU
 import zmq
 import CloudPdrMessages_pb2
 from ClientSession import ClientSession
-
+from multiprocessing import cpu_count
 clients = {}
 
 def processInitMessage(cpdrMsg, context, workersNum, storeBlocks=None):
@@ -91,6 +91,7 @@ def main():
 
     
     args = p.parse_args()
+    args.workersNum = cpu_count()-1
     serve(args.port, args.workersNum)
 
 if __name__ == "__main__":
