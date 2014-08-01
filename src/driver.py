@@ -542,7 +542,7 @@ def main():
                            args=(publisherAddress, sinkAddress, cellsPerW, 
                                  args.hashNum, ibfLength, fs.datSize,
                                  secret, public, True, 
-                                 blocksPerW, True, w, fs.pbSize))
+                                 blocksPerW, doNotComputeTags, w, fs.pbSize))
             p.start()
             workersPool.append(p)
         
@@ -609,6 +609,7 @@ def main():
          
     if args.tagmode == True:
         print "saveTagsForLater"
+        print len(pdrSes.T.keys())
         saveTagsForLater(pdrSes.TT, pdrSes.T, pdrSes.sesKey.key, fs.numBlk, fs.datSize)
     
     if args.preprocMode == True:
@@ -622,7 +623,7 @@ def main():
                                       cltId, args.hashNum, delta,
                                        fs.numBlk, args.runId)
 
-    ip = "newvpn10.cs.umd.edu"
+    ip = "newvpn14.cs.umd.edu"
 #ip = '192.168.1.13'
     #ip = "127.0.0.1"
    
