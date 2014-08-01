@@ -174,15 +174,15 @@ def chunks(s, n):
         yield s[start:start+n]
         
 def chunkAlmostEqual(seq, num):
-    avg = len(seq) / float(num)
-    out = []
-    last = 0.0
-    
-    while last < len(seq):
-        out.append(seq[int(last):int(last + avg)])
-        last += avg
-    
-    return out
+    item_count = item_count or len(items)
+    baskets = min(item_count, maxbaskets)
+    items = iter(items)
+    floor = item_count // baskets 
+    ceiling = floor + 1
+    stepdown = item_count % baskets
+    for x_i in xrange(baskets):
+        length = ceiling if x_i < stepdown else floor
+        yield [items.next() for _ in xrange(length)]
 
 def main():
     p = argparse.ArgumentParser(description='Driver')
