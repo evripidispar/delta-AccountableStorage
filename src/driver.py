@@ -92,8 +92,8 @@ def processServerProof(cpdrProofMsg, session):
     cmbWLock = mp.Lock()
     
     workerPool = []
-    cellsAssignments = BE.chunkAlmostEqual(range(session.fsInfo["ibfLength"]), session.fsInfo["workers"])
-    blockAssignments = BE.chunkAlmostEqual(range(session.fsInfo["blockNum"]), session.fsInfo["workers"])
+    cellsAssignments = list(BE.chunkAlmostEqual(range(session.fsInfo["ibfLength"]), session.fsInfo["workers"]))
+    blockAssignments = list(BE.chunkAlmostEqual(range(session.fsInfo["blockNum"]), session.fsInfo["workers"]))
     
     for w,cellsPerW,blocksPerW in zip(xrange(session.fsInfo["workers"]),
                                       cellsAssignments, blockAssignments):
@@ -510,7 +510,7 @@ def main():
     #fs, fsFp = BlockEngine.getFsDetailsStream(args.blkFp)
     totalBlockBytes = fs.pbSize*fs.numBlk
     bytesPerWorker = (args.task*totalBlockBytes)/ fs.numBlk
-    args.workers = mp.cpu_count()-1
+    args.workers = mp.cpu_count()-2
     pdrSes.addFsInfo(fs.numBlk, fs.pbSize, fs.datSize, int(fsSize), 
                      bytesPerWorker, args.workers, args.blkFp, ibfLength, args.hashNum)
     
@@ -534,8 +534,8 @@ def main():
         STIME = time.time()
         workersPool = []
         
-        cellAssignments = BE.chunkAlmostEqual(range(ibfLength), args.workers)
-        blocksAssignments = BE.chunkAlmostEqual(range(fs.numBlk), args.workers)
+        cellAssignments = list(BE.chunkAlmostEqual(range(ibfLength), args.workers))
+        blocksAssignments = list(BE.chunkAlmostEqual(range(fs.numBlk), args.workers))
     
         for w,cellsPerW,blocksPerW in zip(xrange(args.workers), cellAssignments, blocksAssignments):
             p = mp.Process(target=preprocStage.preprocWorker,
@@ -600,6 +600,7 @@ def main():
         wkeys = pdrSes.W.keys()
         correct = range(fs.numBlk)
         if len(correct) != len(wkeys):
+            
             print "Correct len", len(correct), "diff", len(correct)-len(wkeys), list(set(correct)-set(wkeys))
             sys.exit(0)
             
@@ -621,7 +622,7 @@ def main():
                                       cltId, args.hashNum, delta,
                                        fs.numBlk, args.runId)
 
-    ip = "10.109.171.65"
+    ip = "newvpn10.cs.umd.edu"
 #ip = '192.168.1.13'
     #ip = "127.0.0.1"
    

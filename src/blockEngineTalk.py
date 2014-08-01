@@ -5,9 +5,10 @@ from BlockEngine import createWriteFilesystem2Disk
 def main():
 
     #blockSizes = [512, 1024, 2048, 4096, 8192, 16384, 32768]
-    blockSizes = [2048]
-    blockNumbers = [100, 1000, 10000, 100000, 500000]
-    
+    #blockSizes = [2048]
+    blockSizes = [1024, 1024, 2048, 4096, 8192]
+    #blockNumbers = [100, 1000, 10000, 100000, 500000]
+    blockNumbers = [100]
     desc = "BlockEngineTalk: orders BlockEngine.py to create files \n"
     desc += "of different block sizes and different number of blocks"
     p = argparse.ArgumentParser(description=desc)

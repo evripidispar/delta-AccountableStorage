@@ -78,7 +78,7 @@ def preprocWorker(publisherAddr, sinkAddr, cells, k, m,
     taskLock = threading.Lock()
     sharedTimer = ExpTimer()
     threadsNumber = 1 #ALWAYS 1! This is here not to slow down the subscriber
-    blocksAssignments = set(blocksAssignments)
+    blockAssignments = set(blockAssignments)
     subSocket = context.socket(zmq.SUB)
     subSocket.setsockopt(zmq.SUBSCRIBE, b'work')
     subSocket.setsockopt(zmq.SUBSCRIBE, b'end')

@@ -116,8 +116,8 @@ class ClientSession(object):
         sinkSocket = self.context.socket(zmq.REP)
         sinkSocket.bind(sinkAddress)
         
-        cellAssignments = BE.chunkAlmostEqual(range(ibfLength), self.numWorkers)
-        blockAssignments = BE.chunkAlmostEqual(range(fsMsg.numBlk), self.numWorkers)
+        cellAssignments = list(BE.chunkAlmostEqual(range(ibfLength), self.numWorkers))
+        blockAssignments = list(BE.chunkAlmostEqual(range(fsMsg.numBlk), self.numWorkers))
         workersPool = []
         
         print self.numWorkers
