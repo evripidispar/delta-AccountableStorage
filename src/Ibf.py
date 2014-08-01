@@ -1,6 +1,6 @@
 from HashFunc import Hash1, Hash2, Hash3, Hash4, Hash5, Hash6
 from Cell import Cell
-
+import sys
 
 class Ibf(object):
 	
@@ -92,10 +92,11 @@ class Ibf(object):
 
 		newIbf = Ibf(self.k, self.m)
 		for cIndex in range(self.m):
-			newIbf.cells[cIndex]= self.cells[cIndex].subtract(otherIbf.cells[cIndex],
-															 dataByteSize,
-															  N,
-															  isHashProd)
+			try:
+				newIbf.cells[cIndex]= self.cells[cIndex].subtract(otherIbf.cells[cIndex],dataByteSize, N, isHashProd)
+			except KeyError:
+				print "cIndex", cIndex, "m", self.m
+				sys.exit(0)
 		return newIbf
 
 	def getPureCells(self):

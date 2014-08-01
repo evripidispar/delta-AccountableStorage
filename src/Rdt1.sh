@@ -98,27 +98,27 @@ sleep 10;
 python driver.py -b blocks/blk_500000_blocks_1024_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 49 -r runsdt1/500000____1024.txt --dt 1 --tagload tags/tags_500000_1024.dat --preprocmode;
 python driver.py -b blocks/blk_500000_blocks_1024_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 49 -r runsdt1/500000____1024.txt --dt 1 --tagload tags/tags_500000_1024.dat --preprocload preproc/preproc_500000_1024.data;
 python driver.py -b blocks/blk_500000_blocks_1024_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 49 -r runsdt1/500000____1024.txt --dt 1 --tagload tags/tags_500000_1024.dat --preprocload preproc/preproc_500000_1024.data;
-python driver.py -b blocks/blk_500000_blocks_1024_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 49 -r runsdt1/500000____1024.txt --dt 1 --tagload tags/tags_500000_1024.dat --preprocload preproc/preproc_500000_1024.data;
+#python driver.py -b blocks/blk_500000_blocks_1024_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 49 -r runsdt1/500000____1024.txt --dt 1 --tagload tags/tags_500000_1024.dat --preprocload preproc/preproc_500000_1024.data;
 
 sleep 10;
 
 python driver.py -b blocks/blk_500000_blocks_2048_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 98 -r runsdt1/500000____2048.txt --dt 1 --tagload tags/tags_500000_2048.dat --preprocmode;
 python driver.py -b blocks/blk_500000_blocks_2048_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 98 -r runsdt1/500000____2048.txt --dt 1 --tagload tags/tags_500000_2048.dat --preprocload preproc/preproc_500000_2048.data;
-python driver.py -b blocks/blk_500000_blocks_2048_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 98 -r runsdt1/500000____2048.txt --dt 1 --tagload tags/tags_500000_2048.dat --preprocload preproc/preproc_500000_2048.data;
-python driver.py -b blocks/blk_500000_blocks_2048_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 98 -r runsdt1/500000____2048.txt --dt 1 --tagload tags/tags_500000_2048.dat --preprocload preproc/preproc_500000_2048.data;
+#python driver.py -b blocks/blk_500000_blocks_2048_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 98 -r runsdt1/500000____2048.txt --dt 1 --tagload tags/tags_500000_2048.dat --preprocload preproc/preproc_500000_2048.data;
+#python driver.py -b blocks/blk_500000_blocks_2048_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 98 -r runsdt1/500000____2048.txt --dt 1 --tagload tags/tags_500000_2048.dat --preprocload preproc/preproc_500000_2048.data;
 
 sleep 10;
 
 python driver.py -b blocks/blk_500000_blocks_4096_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 195 -r runsdt1/500000____4096.txt --dt 1 --tagload tags/tags_500000_4096.dat --preprocmode;
 python driver.py -b blocks/blk_500000_blocks_4096_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 195 -r runsdt1/500000____4096.txt --dt 1 --tagload tags/tags_500000_4096.dat --preprocload preproc/preproc_500000_4096.data;
-python driver.py -b blocks/blk_500000_blocks_4096_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 195 -r runsdt1/500000____4096.txt --dt 1 --tagload tags/tags_500000_4096.dat --preprocload preproc/preproc_500000_4096.data;
-python driver.py -b blocks/blk_500000_blocks_4096_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 195 -r runsdt1/500000____4096.txt --dt 1 --tagload tags/tags_500000_4096.dat --preprocload preproc/preproc_500000_4096.data;
+#python driver.py -b blocks/blk_500000_blocks_4096_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 195 -r runsdt1/500000____4096.txt --dt 1 --tagload tags/tags_500000_4096.dat --preprocload preproc/preproc_500000_4096.data;
+#python driver.py -b blocks/blk_500000_blocks_4096_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 195 -r runsdt1/500000____4096.txt --dt 1 --tagload tags/tags_500000_4096.dat --preprocload preproc/preproc_500000_4096.data;
 
 sleep 10;
 
 python driver.py -b blocks/blk_500000_blocks_8192_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 391 -r runsdt1/500000____8192.txt --dt 1 --tagload tags/tags_500000_8192.dat --preprocmode;
 python driver.py -b blocks/blk_500000_blocks_8192_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 391 -r runsdt1/500000____8192.txt --dt 1 --tagload tags/tags_500000_8192.dat --preprocload preproc/preproc_500000_8192.data;
-python driver.py -b blocks/blk_500000_blocks_8192_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 391 -r runsdt1/500000____8192.txt --dt 1 --tagload tags/tags_500000_8192.dat --preprocload preproc/preproc_500000_8192.data;
-python driver.py -b blocks/blk_500000_blocks_8192_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 391 -r runsdt1/500000____8192.txt --dt 1 --tagload tags/tags_500000_8192.dat --preprocload preproc/preproc_500000_8192.data;
+#python driver.py -b blocks/blk_500000_blocks_8192_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 391 -r runsdt1/500000____8192.txt --dt 1 --tagload tags/tags_500000_8192.dat --preprocload preproc/preproc_500000_8192.data;
+#python driver.py -b blocks/blk_500000_blocks_8192_sizeBytes.dat -g generator.txt -k 4 -n 1024 -w 8 --task 391 -r runsdt1/500000____8192.txt --dt 1 --tagload tags/tags_500000_8192.dat --preprocload preproc/preproc_500000_8192.data;
 
 
