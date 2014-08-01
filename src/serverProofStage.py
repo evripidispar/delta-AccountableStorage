@@ -104,7 +104,7 @@ def serverProofWorker(publisherAddress, sinkAddress, cells,
     subSocket.connect(publisherAddress)
     sinkSocket = context.socket(zmq.REQ)
     sinkSocket.connect(sinkAddress)
-    
+    blocks = set(blocks)
     workerName = mp.current_process().name
     hashFunc = [Hash1, Hash2, Hash3, Hash4, Hash5, Hash6]
     results = {"worker":workerName, "cells":{}, "timers":{}, "qSets":{}}

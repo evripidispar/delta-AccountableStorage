@@ -91,7 +91,7 @@ def worker(publisherAddr, sinkAddress, k, m, cells, blockAssignments,
     subSocket.setsockopt(zmq.SUBSCRIBE, b'work')
     subSocket.setsockopt(zmq.SUBSCRIBE, b'end')
     subSocket.connect(publisherAddr)
-    
+    blockAssignments = set(blockAssignments)
     hashFunc = [Hash1, Hash2, Hash3, Hash4, Hash5, Hash6]
     
     print "Validation worker", workerName , "initiated"
