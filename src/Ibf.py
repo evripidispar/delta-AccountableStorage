@@ -38,7 +38,7 @@ class Ibf(object):
 			indices.append(hashIndexVal % m)
 			
 		if cellsAssignment != None:
-			return [i for i in indices if i in cellsAssignment]
+			return [i for i in indices if i in set(cellsAssignment)]
 		return indices
 
 	def getCells(self):
