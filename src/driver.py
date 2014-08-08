@@ -31,6 +31,8 @@ import struct
 from PdrManager import IbfManager, QSetManager
 import gmpy2
 import copy
+import ibfcomputation
+import tagcomputation
 
 import cPickle
 import pprint
@@ -289,73 +291,6 @@ def processClientMessages(incoming, session, lostNum=None):
         res = processServerProof(cpdrMsg, session)
         return res
 
-
-
-def saveTagsForLater(TagTimes, Tags, sKey, bNum, bSz):
-    
-    stfl = CloudPdrMessages_pb2.SaveTagsForLater()
-    stfl.key = "toAFile"
-    stfl.bNum = bNum
-    bSz = bSz/8
-    stfl.bSz = bSz
-    maxTime = 0
-    for k,v in TagTimes.items():
-        if k.endswith("_tag") and maxTime < v:
-            maxTime = TagTimes[k]
-    stfl.ctime = maxTime
-    for i,t in Tags.items():
-        stfl.index.append(i)
-        stfl.tags.append(str(t))
-        if i == 0:
-            print t
-    stfl = stfl.SerializeToString()
-    fName = "tags/tags_%s_%s.dat" % (str(bNum),str(bSz))
-    f = open(fName, "w")
-    f.write(stfl)
-    f.close()
-    fName = "tags/key_%s_%s.dat" % (str(bNum),str(bSz))
-    f = open(fName, "w")
-    cPickle.dump(sKey, f)
-    f.close()
-
-
-def loadTagsFromDisk(tagFile):
-    storedTags = CloudPdrMessages_pb2.SaveTagsForLater()
-    f = open(tagFile)
-    storedTags.ParseFromString(f.read())
-    f.close()
-    
-    #storedKey = cPickle.loads(str(storedTags.key))
-    taggingTime = float(storedTags.ctime)
-    
-    tags = {}
-    for i in storedTags.index:
-        tags[int(i)] = str(storedTags.tags[int(i)])
-        if i == 0:
-            print tags[i]
-    diskKeyName = tagFile.replace("/tags","/key")
-    f=open(diskKeyName)
-    storedKey = cPickle.load(f)
-    return (tags, storedKey, taggingTime)
-
-def loadPreprocStage(ibfFile):
-    fp = open(ibfFile, "rb")
-    obj = cPickle.load(fp)
-    fp.close()    
-    return (obj["ibf"], obj["w"], obj["ibfTime"])
-
-def savePrprocStageForLater(IbfTimes, W, ibf, blockNum, blockSize):
-    print "Saving preproc stage for later"
-    outputName = "preproc/preproc_%s_%s.data" % (str(blockNum), str(blockSize/8))
-    maxIbfTime = 0
-    for k,v in IbfTimes.items():
-        if k.endswith("_ibf") and maxIbfTime < v:
-            maxIbfTime = v
-    
-    fp = open(outputName,"wb")
-    cPickle.dump({"w":W, "ibf":ibf, "ibfTime":maxIbfTime}, fp)
-    fp.close()
-    
    
 def chooseRandomBlocksForRandomChallenge(totalBlocks, precentage):
     if totalBlocks <= 10000:
@@ -364,7 +299,6 @@ def chooseRandomBlocksForRandomChallenge(totalBlocks, precentage):
         k = random.sample(xrange(totalBlocks), int(totalBlocks*precentage))
         return set(k)
     
-
 def getsizeofDictionary(dictionary):
     size = sys.getsizeof(dictionary)
     for k,v in dictionary.items():
@@ -404,15 +338,15 @@ def main():
    
     p.add_argument('-r', dest="runId", action='store', help='Current running id')
     
-    p.add_argument('--tagmode', dest="tagmode", action='store_true', help='Tag Mode',  default=False)
-    p.add_argument('--tagload', dest="tagload", action='store', default=None, 
+    p.add_argument('--tagmode', dest="tagMode", action='store_true', help='Tag Mode',  default=False)
+    p.add_argument('--tagload', dest="tagLoad", action='store', default=None, 
                    help='load tags/keys from location')
     
     p.add_argument('--dt', dest="dt", action='store', type=int, default=0, help='Type of delta')
     
-    p.add_argument('--preprocmode', dest="preprocMode", action="store_true", help='store Preproc Mode', default=False)
+    p.add_argument('--ibfmode', dest="ibfMode", action="store_true", help='store Preproc Mode', default=False)
     
-    p.add_argument('--preprocload', dest="preprocLoad", action="store", default=None,
+    p.add_argument('--ibfload', dest="ibfLoad", action="store", default=None,
                    help='load ibf from ibf/w')
     
     p.add_argument("--randomMode", dest="randomMode", action="store_true", default=False,
@@ -436,46 +370,33 @@ def main():
         print 'Please specify run ID'
         sys.exit(-4)
         
-    #Generate client id
     cltId = produceClientId()
-    
-    #Create current session
     pdrSes = PdrSession(cltId)
     
-    #Read the generator from File
+    
     fp = open(args.genFile, "r")
     g = fp.read()
     g = long(g)
     fp.close() 
     pdrSes.addG(g)
     
-    loadedTags = None
-    loadedKey = None
-    loadedTagTime = None
-    doNotComputeTags = False
-    
-    if args.tagload != None:
-        print "LOADING Tags"
-        loadedTags, loadedKey, loadedTagTime = loadTagsFromDisk(args.tagload)
-        doNotComputeTags = True
-        pdrSes.T = loadedTags
-        
-    if doNotComputeTags == True:
-        pdrSes.sesKey = CloudPDRKey(args.n, g, loadedKey)
+    T, W, sesKey, wtTimes = (None,None,None,None)
+    if args.tagLoad != None:
+        print "Loading (tags,W) from disk"
+        T, W, sesKey, wtTimes = tagcomputation.loadSavedTags(args.tagLoad)
+        pdrSes.T = T
+        pdrSes.W = W
+        pdrSes.sesKey = CloudPDRKey(args.n, g, sesKey)
     else:
         pdrSes.sesKey = CloudPDRKey(args.n, g, RSA.generate(args.n))
     
-    localIbf = None
-    localW = None
-    loadedIbfTime = None
-    doNotPerformPreproc = False
-    if args.preprocLoad != None:
-        print "LOADING Stored preprocessing information"
-        localIbf, localW, loadedIbfTimes = loadPreprocStage(args.preprocLoad)
-        pdrSes.addState(localIbf)
-        pdrSes.W = localW
-        doNotPerformPreproc = True
     
+    ibf, ibfTime = (None,None)
+    if args.ibfLoad != None:
+        print "Loading (ibf) from disk"
+        ibf, ibfTime = ibfcomputation.loadIbfFromDisk(args.ibfLoad) 
+        pdrSes.addState(ibf)
+            
     #Generate key class
     secret = pdrSes.sesKey.getSecretKeyFields()
     public = pdrSes.sesKey.getPublicKeyFields()
@@ -505,116 +426,30 @@ def main():
     ibfLength = int(ibfLength)
     pdrSes.addibfLength (ibfLength)
     
-    
-    
-    #fs, fsFp = BlockEngine.getFsDetailsStream(args.blkFp)
     totalBlockBytes = fs.pbSize*fs.numBlk
     bytesPerWorker = (args.task*totalBlockBytes)/ fs.numBlk
-    args.workers = mp.cpu_count()-2
+    args.workers = 4
     pdrSes.addFsInfo(fs.numBlk, fs.pbSize, fs.datSize, int(fsSize), 
                      bytesPerWorker, args.workers, args.blkFp, ibfLength, args.hashNum)
     
     
-    #pdrManager = IbfManager()
-    #pdrManager.start()
-    
     zmqContext =  zmq.Context()
-    publisherAddress = "tcp://127.0.0.1:9998"
-    sinkAddress = "tcp://127.0.0.1:9999"
     
-    publishSocket = zmqContext.socket(zmq.PUB)
-    publishSocket.bind(publisherAddress)
+    if args.ibfMode == True:
+        ibfcomputation.driver(ibfLength, args.workers, fs.numBlk,
+                              zmqContext, args.hashNum, fs.datSize,
+                              secret, public, fs.pbSize, fp, bytesPerWorker)
+        return
     
-    sinkSocket = zmqContext.socket(zmq.REP)
-    sinkSocket.bind(sinkAddress)
-    
-    
-    
-    if doNotPerformPreproc == False:
-        STIME = time.time()
-        workersPool = []
-        
-        cellAssignments = list(BE.chunkAlmostEqual(range(ibfLength), args.workers))
-        blocksAssignments = list(BE.chunkAlmostEqual(range(fs.numBlk), args.workers))
-    
-        for w,cellsPerW,blocksPerW in zip(xrange(args.workers), cellAssignments, blocksAssignments):
-            p = mp.Process(target=preprocStage.preprocWorker,
-                           args=(publisherAddress, sinkAddress, cellsPerW, 
-                                 args.hashNum, ibfLength, fs.datSize,
-                                 secret, public, True, 
-                                 blocksPerW, doNotComputeTags, w, fs.pbSize))
-            p.start()
-            workersPool.append(p)
-        
-          
-            
-        print "Waiting to establish workers"
-        time.sleep(5)
-        
-        blockStep = 0
-        while True:
-            dataChunk = fp.read(bytesPerWorker)
-            if dataChunk:
-                dat = cPickle.dumps(dataChunk)
-                publishSocket.send_multipart(['work', dat])
-                blockStep+=1
-                if (blockStep  % 100000) == 0:
-                    print "Dispatched ", blockStep, "out of", fs.numBlk
-                    time.sleep(3)     
-            else:
-                publishSocket.send_multipart(["end"])
-                break
-            
-        fp.close()
-        work = []
-        print 'Waiting'
-        while len(work) != args.workers:
-                w = sinkSocket.recv_pyobj()
-                sinkSocket.send("ACK")
-                work.append(w)
-           
-        if doNotComputeTags == False:
-            pdrSes.T= {}
-    
-        pdrSes.W = {}
-    
-        localIbf = Ibf(args.hashNum, ibfLength)    
-        for i in work:
-            pdrSes.W.update(i["w"])
-            localIbf.cells.update(i["cells"])
-            if "tags" in i.keys():
-                pdrSes.T.update(i["tags"])
-            for tName in i["timerNames"]:
-                pdrSes.TT[tName+str("_tag")] = i["timers"].getTotalTimer(tName, "tag")
-                pdrSes.TT[tName+str("_ibf")] = i["timers"].getTotalTimer(tName, "ibf")
-            #print i["worker"], i["blocksExamined"], i["w"].keys(), len(i["w"].keys()), len(pdrSes.W.keys()), len(localIbf.cells.keys()), ibfLength
-            #x = i["timers"].getTotalTimer(i["worker"], "ibf")
-        pdrSes.addState(localIbf)
-        
-        for worker in workersPool:
-            worker.join()
-            worker.terminate()
-     
-        ETIME = time.time()
-        print ETIME - STIME-5 , "sec"
-        wkeys = pdrSes.W.keys()
-        correct = range(fs.numBlk)
-        if len(correct) != len(wkeys):
-            
-            print "Correct len", len(correct), "diff", len(correct)-len(wkeys), list(set(correct)-set(wkeys))
-            sys.exit(0)
-            
-    pdrSes.addNetInfo(publisherAddress, sinkAddress, publishSocket, sinkSocket)
-    
-         
-    if args.tagmode == True:
-        print "saveTagsForLater"
-        print len(pdrSes.T.keys())
-        saveTagsForLater(pdrSes.TT, pdrSes.T, pdrSes.sesKey.key, fs.numBlk, fs.datSize)
-    
-    if args.preprocMode == True:
-        savePrprocStageForLater(pdrSes.TT, pdrSes.W, pdrSes.ibf, fs.numBlk, fs.datSize)
-        sys.exit(0)
+    if args.tagMode == True:
+        tagcomputation.driver(zmqContext, args.workers,
+                              fp, fs.pbSize, fs.datSize,
+                              secret, public, pdrSes.sesKey.key,
+                              fs.numBlk)
+        return
+
+
+#TODO update ibf, tag timeres        
        
     
     pdrSes.addDelta(delta)
@@ -622,7 +457,6 @@ def main():
     initMsg = MU.constructInitMessage(pubPB, args.blkFp, pdrSes.T,
                                       cltId, args.hashNum, delta,
                                        fs.numBlk, args.runId)
-
     ip = "newvpn14.cs.umd.edu"
 #ip = '192.168.1.13'
     #ip = "127.0.0.1"
@@ -678,10 +512,10 @@ def main():
             run_results[s] = proofSequentialTimer.timers[pName][k]
     
     run_results["tag-size"] = sizeTag
-    if doNotComputeTags == True:
-        run_results["tag"] = loadedTagTime
-    if doNotPerformPreproc == True:
-        run_results["ibf"] = loadedIbfTimes
+   # if doNotComputeTags == True:
+   #     run_results["tag"] = loadedTagTime
+   # if doNotComputIbf == True:
+   #     run_results["ibf"] = loadedIbfTimes
     
     fp = open(args.runId, "a+")
     for k,v in run_results.items():

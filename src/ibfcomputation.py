@@ -14,7 +14,7 @@ from client import RpcPdrClient
 from Cell import Cell
 
 
-def loadSavedIbf(ibfFile):
+def loadIbfFromDisk(ibfFile):
     fp = open(ibfFile, "rb")
     obj = cPickle.load(fp)
     fp.close()    
@@ -25,7 +25,7 @@ def loadSavedIbf(ibfFile):
 
 
 
-def saveIbfForLater(IbfTimes, ibf, blockNum, blockSize):
+def saveIbf2Disk(IbfTimes, ibf, blockNum, blockSize):
     outputName = "preproc/preproc_%s_%s.data" % (str(blockNum), str(blockSize/8))
     ibfTimesPerWorker = []
     for k,v in IbfTimes.items():
@@ -196,5 +196,5 @@ def driver(ibfLength, workersNum, blocksNum, zmqContext, k, dataSize,
             worker.join()
             worker.terminate()
     
-    saveIbfForLater(TT, localIbf, blocksNum, dataSize)
+    saveIbf2Disk(TT, localIbf, blocksNum, dataSize)
     
