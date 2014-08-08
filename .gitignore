@@ -4,3 +4,4 @@ src/tags
 *.prof
 src/runs
 src/preproc
+*.*~
