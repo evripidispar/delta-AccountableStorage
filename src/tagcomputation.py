@@ -28,6 +28,12 @@ def saveTagsW2Disk(tagTimes, tags, w, blockNum, blockSize, sessionKey):
     fp=open(fname,"wb")
     cPickle.dump(message,fp)
     fp.close()
+    
+    fname = "tags/tagperf_%d_%d.txt" % (blockNum, blockSize/8)
+    fp = open(fname,"ab+")
+    cPickle.dump(message["times"],fp)
+    fp.close()
+
     return
 
 
