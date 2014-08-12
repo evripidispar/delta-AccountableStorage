@@ -141,7 +141,7 @@ def ibfWorker(publisherAddr, sinkAddr, cells, k, m,
 
 
 def driver(ibfLength, workersNum, blocksNum, zmqContext, k, dataSize,
-           secret, public, protobufSize, dataFP, bytesPerWorker):
+           secret, public, protobufSize, dataFP):
     
     publisherAddress = "tcp://127.0.0.1:9998"
     sinkAddress = "tcp://127.0.0.1:9999"
