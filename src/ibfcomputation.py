@@ -165,8 +165,9 @@ def driver(ibfLength, workersNum, blocksNum, zmqContext, k, dataSize,
         workersPool.append(p)
 
     time.sleep(5)
+    readFactor = BE.getReadFactor(blocksNum)
     while True:
-        dataChunk = dataFP.read(50*protobufSize)
+        dataChunk = dataFP.read(readFactor*protobufSize)
         if len(dataChunk) ==0:
             publishSocket.send_multipart(["end"])
             break

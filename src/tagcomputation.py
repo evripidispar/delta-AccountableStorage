@@ -97,7 +97,9 @@ def driver(zmqContext, workersNum, dataFP,
         
         time.sleep(1)
         
-        readAmount = 100 * protobufSize
+        
+        readfactor = be.getReadFactor(blockNum)
+        readAmount = readfactor * protobufSize
         while True:
             dataChunk = dataFP.read(readAmount)
             if len(dataChunk) == 0:

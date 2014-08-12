@@ -12,6 +12,13 @@ import copy
 
 TEST = False
 
+def getReadFactor(blockNum):
+    
+    if blockNum > 10000:
+        return blockNum*0.02
+    else:
+        return blockNum
+
 def createBlocks(blocksNum, blockSize):
     blocks = BlockUtil.blockCreatorMemory(blocksNum, blockSize)
     return blocks
