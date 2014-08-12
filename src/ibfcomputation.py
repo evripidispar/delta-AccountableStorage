@@ -152,7 +152,7 @@ def driver(ibfLength, workersNum, blocksNum, zmqContext, k, dataSize,
     sinkSocket = zmqContext.socket(zmq.REP)
     sinkSocket.bind(sinkAddress)
     
-    cellAssignments = list(BE.chunkAlmostEqual(range(ibfLength), workersNum))
+    cellAssignments = list(BE.chunkAlmostEcqual(range(ibfLength), workersNum))
     
     
     workersPool = []
