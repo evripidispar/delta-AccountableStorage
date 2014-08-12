@@ -15,9 +15,9 @@ TEST = False
 def getReadFactor(blockNum):
     
     if blockNum > 10000:
-        return blockNum*0.02
+        return int(blockNum*0.1)
     else:
-        return blockNum
+        return int(blockNum)
 
 def createBlocks(blocksNum, blockSize):
     blocks = BlockUtil.blockCreatorMemory(blocksNum, blockSize)
