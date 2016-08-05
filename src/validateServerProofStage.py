@@ -62,17 +62,17 @@ def validationTask(taskQ, endQ, results, workerName, k, m, hashFunc,
                             cmbValue["w"] *= wI
                             cmbValue["w"] = gmpy2.powmod(cmbValue["w"], 1, N)
                         x.endTimer(workerName, "cmbW")
-                else:
-                    if bIndex in blockAssignments:
-                        x.startTimer(workerName, "qSet_check")
-                        lostIndices = Ibf.getIndices(k, m, hashFunc, 
-                                                     blk.getStringIndex(), isIndex=True)
+                #else:
+                #    if bIndex in blockAssignments:
+                #        x.startTimer(workerName, "qSet_check")
+                #        lostIndices = Ibf.getIndices(k, m, hashFunc, 
+                #                                     blk.getStringIndex(), isIndex=True)
                         
-                        for lIndex in lostIndices:
-                            if lIndex not in results["qSets"].keys():
-                                results["qSets"][lIndex] = []
-                            results["qSets"][lIndex].append(bIndex)
-                        x.endTimer(workerName, "qSet_check")
+                #        for lIndex in lostIndices:
+                #            if lIndex not in results["qSets"].keys():
+                #                results["qSets"][lIndex] = []
+                #            results["qSets"][lIndex].append(bIndex)
+                #        x.endTimer(workerName, "qSet_check")
                     
                        
         except Empty:

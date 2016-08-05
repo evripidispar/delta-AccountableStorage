@@ -49,10 +49,10 @@ def recover(ibfLost, lostIndices, secret, N, g):
 			print "Failed to recover", "Reason: ", "Datasum", cIndex
 			return None
 			
-		if  ibfLost.cells[cIndex].getHashProd() !=1:
-			print "Failed to recover", "Reason: ", "HashProd", cIndex
-			print cIndex
-			return None
+		#if  ibfLost.cells[cIndex].getHashProd() != 1: #previously it was 1
+		#	print "Failed to recover", "Reason: ", "HashProd", cIndex
+		#	print cIndex, ibfLost.cells[cIndex].getHashProd()
+		#	return None
 					
 		
 	if len(lostIndices) != 0:

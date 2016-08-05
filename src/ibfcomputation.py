@@ -152,7 +152,7 @@ def driver(ibfLength, workersNum, blocksNum, zmqContext, k, dataSize,
     sinkSocket = zmqContext.socket(zmq.REP)
     sinkSocket.bind(sinkAddress)
     
-    cellAssignments = list(BE.chunkAlmostEcqual(range(ibfLength), workersNum))
+    cellAssignments = list(BE.chunkAlmostEqual(range(ibfLength), workersNum))
     
     
     workersPool = []
@@ -198,4 +198,5 @@ def driver(ibfLength, workersNum, blocksNum, zmqContext, k, dataSize,
             worker.terminate()
     
     saveIbf2Disk(TT, localIbf, blocksNum, dataSize)
+    #return localIbf
     

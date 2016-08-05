@@ -1,14 +1,14 @@
 from Crypto.Util import number
 #from bitarray import bitarray
 from Block import *
-from CryptoUtil import apply_f
+from CryptoUtil import *
 import gmpy2
 
 class Cell(object):
 	def __init__(self, identity, dataBitSize):
 		self.count = 0		
 		self.dataSum = Block(identity, dataBitSize)
-		self.hashProd = 1
+		self.hashProd = 1 #previously 1
 		self.f = 0
 		self.pickleHackCounter = 0
 
@@ -19,10 +19,10 @@ class Cell(object):
 		self.dataSum.data = bitarray(str(data))
 
 	def zeroCell(self):
-		self.count=0
+		self.count = 0
 #		self.count.setValue(0)
 		self.dataSum.data.setall(False)
-		self.hashProd =  1
+		self.hashProd =  1 #previously 1
 
 	def setCount(self, count):
 		self.count = count
@@ -52,10 +52,13 @@ class Cell(object):
 		self.dataSum.addBlockData(block)
 		
 		if keepHashProdOne == False:
-			f = apply_f(block, N, secret, g)
-			self.f = f
-			self.hashProd *= f
-			self.hashProd = gmpy2.powmod(self.hashProd, 1, N)
+	            f = MessageAuthenticationCode(secret, block)
+        	    self.f = f
+          	    self.hashProd = f ^ self.hashProd
+			#f = apply_f(block, N, secret, g)
+			#self.f = f
+			#self.hashProd *= f
+			#self.hashProd = gmpy2.powmod(self.hashProd, 1, N)
 		else:
 			self.hashProd = 1
 			
@@ -73,10 +76,13 @@ class Cell(object):
 		
 		if block.isZeroDataSum()==False: #TODO
 			self.dataSum.addBlockData(block)
-			f = apply_f(block, N, secret, g)
-			fInv = number.inverse(f, N)  #TODO: Not sure this is true
-			self.hashProd *= fInv
-			self.hashProd = gmpy2.powmod(self.hashProd, 1, N)
+            		f = MessageAuthenticationCode(secret, block)
+            
+            		self.hashProd = f ^ self.hashProd
+			#f = apply_f(block, N, secret, g)
+			#fInv = number.inverse(f, N)  #TODO: Not sure this is true
+			#self.hashProd *= fInv
+			#self.hashProd = gmpy2.powmod(self.hashProd, 1, N)
 
 	def isPure(self):
 		if self.count == 1:  
@@ -106,11 +112,13 @@ class Cell(object):
 		#dataSum.addBlockData(localDS ^ otherDS)
 		
 		#hashProd
-		diffCell.hashProd = 1	
+		diffCell.hashProd = long(1)	
 		if isHashProdOne == False:
-			otherFInv = number.inverse(otherCell.getHashProd(), N)
-			diffCell.hashProd = otherFInv * self.hashProd
-			diffCell.hashProd = gmpy2.powmod(diffCell.hashProd, 1, N) 
+            		otherF = otherCell.getHashProd()
+            		diffCell.hashProd = otherF ^ self.hashProd
+			#otherFInv = number.inverse(otherCell.getHashProd(), N)
+			#diffCell.hashProd = otherFInv * self.hashProd
+			#diffCell.hashProd = gmpy2.powmod(diffCell.hashProd, 1, N) 
 		
 		return diffCell
 

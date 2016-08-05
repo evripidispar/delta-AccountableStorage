@@ -190,35 +190,35 @@ class ClientSession(object):
             w.join()
             w.terminate()
       
-        et.startTimer(pName, "cmbLost")
-        combinedLostTags = {}
-        for k in qS.keys():
-            #print "Position:",  k
-            val = qS[k]
+        #et.startTimer(pName, "cmbLost")
+        #combinedLostTags = {}
+        #for k in qS.keys():
+        #    print "Position:",  k
+        #    val = qS[k]
             
-            if k not in combinedLostTags.keys():
-                combinedLostTags[k] = 1
+        #    if k not in combinedLostTags.keys():
+        #        combinedLostTags[k] = 1
                  
-            for v in val:
-                #print "Indices in Qset", v
-                binV  = serverIbf.binPadLostIndex(v)
-                aBlk = pickPseudoRandomTheta(self.challenge, binV)
-                aI = number.bytes_to_long(aBlk)
-                lostTag=gmpy2.powmod(self.T[v], aI, self.clientKeyN)
-                combinedLostTags[k] = gmpy2.powmod((combinedLostTags[k]*lostTag), 1, self.clientKeyN)
+        #    for v in val:
+        #        print "Indices in Qset", v
+        #        binV  = serverIbf.binPadLostIndex(v)
+        #        aBlk = pickPseudoRandomTheta(self.challenge, binV)
+        #        aI = number.bytes_to_long(aBlk)
+        #        lostTag=gmpy2.powmod(self.T[v], aI, self.clientKeyN)
+        #        combinedLostTags[k] = gmpy2.powmod((combinedLostTags[k]*lostTag), 1, self.clientKeyN)
     
 
         
-        et.endTimer(pName, "cmbLost")
+        #et.endTimer(pName, "cmbLost")
         
         proofMsg = MU.constructProofMessage(combinedValues["cSum"],
                                             combinedValues["cTag"],
                                             serverIbf.cells, 
-                                            self.lost ,
-                                            combinedLostTags)
+                                            self.lost,
+                                            combinedLostTags={})
  
         run_results = {}
-        run_results['proof-size'] = len(proofMsg)
+        run_results['proof-size'] = len(proofMsg) 
         for k in TT.keys():
             key = k[k.index("_")+1:]
             if key not in run_results.keys():

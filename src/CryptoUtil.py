@@ -18,3 +18,8 @@ def apply_f(block, N, secret_key, g):
 	
 	abExp = aLong*bLong
 	return gmpy2.powmod(g, abExp, N)
+
+def MessageAuthenticationCode(secret_key, block):
+	hmac = HMAC.new(secret_key)
+	hmac.update(str(number.bytes_to_long(block.data.tobytes())))
+	return int(hmac.hexdigest(), 16)

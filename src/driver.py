@@ -179,29 +179,29 @@ def processServerProof(cpdrProofMsg, session):
 
     print "# # # # # # # ##  # # # # # # # # # # # # # ##"
     
-    et.registerTimer(pName, "lostSum")
-    et.startTimer(pName, "lostSum")
-    lostSum = {}
-    for p in cpdrProofMsg.proof.lostTags.pairs:
-        lostCombinedTag = long(p.v)
-        Lre =gmpy2.powmod(lostCombinedTag, sesSecret["e"], session.sesKey.key.n)
+    #et.registerTimer(pName, "lostSum")
+    #et.startTimer(pName, "lostSum")
+    #lostSum = {}
+    #for p in cpdrProofMsg.proof.lostTags.pairs:
+    #    lostCombinedTag = long(p.v)
+    #    Lre =gmpy2.powmod(lostCombinedTag, sesSecret["e"], session.sesKey.key.n)
         
-        Qi = qS[p.k]
-        combinedWL = 1
-        for vQi in Qi:
-            h = SHA256.new()
-            aLBlk = pickPseudoRandomTheta(session.challenge, session.ibf.binPadLostIndex(vQi))
-            aLI = number.bytes_to_long(aLBlk)
-            wL = session.W[vQi]
-            h.update(str(wL))
-            wLHash = number.bytes_to_long(h.digest())
-            waL = gmpy2.powmod(wLHash, aLI, session.sesKey.key.n)
-            combinedWL = gmpy2.powmod((combinedWL*waL), 1, session.sesKey.key.n)
+    #    Qi = qS[p.k]
+    #    combinedWL = 1
+    #    for vQi in Qi:
+    #        h = SHA256.new()
+    #        aLBlk = pickPseudoRandomTheta(session.challenge, session.ibf.binPadLostIndex(vQi))
+    #        aLI = number.bytes_to_long(aLBlk)
+    #        wL = session.W[vQi]
+    #        h.update(str(wL))
+    #        wLHash = number.bytes_to_long(h.digest())
+    #         waL = gmpy2.powmod(wLHash, aLI, session.sesKey.key.n)
+    #        combinedWL = gmpy2.powmod((combinedWL*waL), 1, session.sesKey.key.n)
         
-        combinedWLInv = number.inverse(combinedWL, session.sesKey.key.n)
-        lostSum[p.k] = Lre*combinedWLInv
-        lostSum[p.k] = gmpy2.powmod(lostSum[p.k], 1, session.sesKey.key.n)
-    et.endTimer(pName, "lostSum")
+    #    combinedWLInv = number.inverse(combinedWL, session.sesKey.key.n)
+    #    lostSum[p.k] = Lre*combinedWLInv
+    #    lostSum[p.k] = gmpy2.powmod(lostSum[p.k], 1, session.sesKey.key.n)
+    #et.endTimer(pName, "lostSum")
     
     
     
@@ -217,15 +217,16 @@ def processServerProof(cpdrProofMsg, session):
                                    session.sesKey.key.n, session.fsInfo["blkSz"], True)
     et.endTimer(pName,"subIbf")
     
-    for k in lostSum.keys():  
+    #for k in servLost:
+    for k in servLost:  
         print k
         
-        assert k in serverStateIbf.cells.keys()
-        assert k in session.ibf.cells.keys()
-        assert k in diffIbf.cells.keys()
+        #assert k in serverStateIbf.cells.keys()
+        #assert k in session.ibf.cells.keys()
+        #assert k in diffIbf.cells.keys()
         
-        diffIbf.cells[k].hashProd = copy.deepcopy(lostSum[k])
-        assert diffIbf.cells[k].hashProd == lostSum[k]
+        #diffIbf.cells[k].hashProd = copy.deepcopy(lostSum[k])
+        #assert diffIbf.cells[k].hashProd == lostSum[k]
     
     et.registerTimer(pName, "recover")
     et.startTimer(pName, "recover")
@@ -332,7 +333,7 @@ def main():
     p.add_argument('--task', dest='task', action='store', type=int, default=100,
                    help='Number of blocks per worker for the W,Tag calculation')
    
-    p.add_argument('-w', dest="workers", action='store', type=int, default=4,
+    p.add_argument('-w', dest="workers", action='store', type=int, default=8,
                   help='Number of worker processes ')
     
    
@@ -432,13 +433,27 @@ def main():
     pdrSes.addFsInfo(fs.numBlk, fs.pbSize, fs.datSize, int(fsSize), 
                      bytesPerWorker, args.workers, args.blkFp, ibfLength, args.hashNum)
     
-    
     zmqContext =  zmq.Context()
+    
+    publisherAddress = "tcp://192.168.1.191:7889"
+    sinkAddress = "tcp://192.168.1.191:7999"
+    
+    publishSocket = zmqContext.socket(zmq.PUB)
+    publishSocket.bind(publisherAddress)
+    
+    sinkSocket = zmqContext.socket(zmq.REP)
+    sinkSocket.bind(sinkAddress)
+    
+    pdrSes.addNetInfo(publisherAddress, sinkAddress, publishSocket, sinkSocket)
+    
+    #zmqContext =  zmq.Context()
     
     if args.ibfMode == True:
         ibfcomputation.driver(ibfLength, args.workers, fs.numBlk,
                               zmqContext, args.hashNum, fs.datSize,
-                              secret, public, fs.pbSize, fp, bytesPerWorker)
+                              secret, public, fs.pbSize, fp)
+        
+        #pdrSes.addState(tmpIbf)
         return
     
     if args.tagMode == True:
@@ -457,9 +472,10 @@ def main():
     initMsg = MU.constructInitMessage(pubPB, args.blkFp, pdrSes.T,
                                       cltId, args.hashNum, delta,
                                        fs.numBlk, args.runId)
-    ip = "newvpn14.cs.umd.edu"
+    #ip = "localhost"
+    #ip = "newvpn14.cs.umd.edu"
 #ip = '192.168.1.13'
-    #ip = "127.0.0.1"
+    ip = "127.0.0.1"
    
     clt = RpcPdrClient(zmqContext)    
     print "Sending Initialization message"
@@ -520,6 +536,10 @@ def main():
     fp = open(args.runId, "a+")
     for k,v in run_results.items():
         fp.write(k.ljust(20)+"\t"+str(v).ljust(20)+"\n")
+    #print wtTimes
+    #print ibfTime
+    fp.write('ibf'.ljust(20)+"\t"+str(max(ibfTime)).ljust(20)+"\n")
+    fp.write('tag'.ljust(20)+"\t"+str(max(wtTimes)).ljust(20)+"\n")
     fp.close()
     
     

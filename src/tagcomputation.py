@@ -14,7 +14,7 @@ from TagGenerator import singleTag
 
 def loadSavedTags(tagFile):
     fp = open(tagFile,"rb")
-    d = cPickle.load(tagFile)
+    d = cPickle.load(file(tagFile))
     fp.close()
     return (d["tags"], d["w"], d["key"], d["times"])
 

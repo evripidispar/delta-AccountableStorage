@@ -72,17 +72,17 @@ def serverProofTask(taskQ, endQ, results, workerName, cells, blockAssignments,
                         cmbVal["cTag"] = gmpy2.powmod(cmbVal["cTag"],1,N)
                     x.endTimer(workerName,"cTagKept")
                         
-            else:
-                if bIndex in blockAssignments:
-                    x.startTimer(workerName, "qSet_proof")
-                    lostIndices = Ibf.getIndices(k, m, hashFunc, 
-                                                 job['block'].getStringIndex(), isIndex=True)
+            #else:
+            #    if bIndex in blockAssignments:
+            #        x.startTimer(workerName, "qSet_proof")
+            #        lostIndices = Ibf.getIndices(k, m, hashFunc, 
+            #                                     job['block'].getStringIndex(), isIndex=True)
                     
-                    for lIndex in lostIndices:
-                        if lIndex not in results["qSets"].keys():
-                            results["qSets"][lIndex] = []
-                        results["qSets"][lIndex].append(bIndex)
-                    x.endTimer(workerName, "qSet_proof")
+            #        for lIndex in lostIndices:
+            #            if lIndex not in results["qSets"].keys():
+            #                results["qSets"][lIndex] = []
+            #            results["qSets"][lIndex].append(bIndex)
+            #        x.endTimer(workerName, "qSet_proof")
                 
         except Empty:
             pass
